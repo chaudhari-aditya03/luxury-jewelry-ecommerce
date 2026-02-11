@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ivory-100 dark:bg-gray-900 text-charcoal-600 dark:text-white transition-colors duration-250;
+  }
+
+  h1 {
+    @apply font-display text-4xl font-bold tracking-tight text-charcoal-600 dark:text-ivory-100;
+  }
+
+  h2 {
+    @apply font-display text-3xl font-bold tracking-tight text-charcoal-600 dark:text-ivory-100;
+  }
+
+  h3 {
+    @apply font-display text-2xl font-bold tracking-tight text-charcoal-600 dark:text-ivory-100;
+  }
+
+  button {
+    @apply transition-all duration-250;
+  }
+
+  input, textarea, select {
+    @apply transition-colors duration-250;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-rose-gold-500 text-white rounded-lg hover:bg-rose-gold-600 transition-all duration-250 shadow-soft hover:shadow-gentle disabled:opacity-50 disabled:cursor-not-allowed font-medium;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-white dark:bg-gray-800 text-charcoal-600 dark:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-250 shadow-soft disabled:opacity-50 disabled:cursor-not-allowed font-medium;
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 border-2 border-rose-gold-500 text-rose-gold-500 rounded-lg hover:bg-rose-gold-50 dark:hover:bg-rose-gold-900/10 transition-all duration-250 disabled:opacity-50 disabled:cursor-not-allowed font-medium;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .input-base {
+    @apply w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-charcoal-600 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-rose-gold-500 focus:border-transparent;
+  }
+
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-soft hover:shadow-gentle transition-all duration-250 border border-rose-gold-100/30;
+  }
+
+  .section {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-250;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B76E79;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2E2E2E;
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: #2E2E2E;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B76E79;
+  }
+}
