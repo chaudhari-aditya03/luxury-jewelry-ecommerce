@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,6 +25,14 @@ import java.util.Map;
 public class CouponController {
 
     private final CouponService couponService;
+
+    @GetMapping("/admin/coupons")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all coupons (Admin)")
+    public ResponseEntity<ApiResponse<List<Coupon>>> getAllCoupons() {
+        List<Coupon> coupons = couponService.getAllCoupons();
+        return ResponseEntity.ok(ApiResponse.success(coupons));
+    }
 
     @PostMapping("/admin/coupons")
     @PreAuthorize("hasRole('ADMIN')")
@@ -46,5 +55,13 @@ public class CouponController {
         response.put("finalAmount", orderAmount.subtract(discount));
         
         return ResponseEntity.ok(ApiResponse.success("Coupon applied successfully", response));
+    }
+
+    @DeleteMapping("/admin/coupons/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete coupon (Admin)")
+    public ResponseEntity<ApiResponse<Void>> deleteCoupon(@PathVariable Long id) {
+        couponService.deleteCoupon(id);
+        return ResponseEntity.ok(ApiResponse.success("Coupon deleted successfully", null));
     }
 }

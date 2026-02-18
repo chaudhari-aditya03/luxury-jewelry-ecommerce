@@ -59,6 +59,9 @@ public class SecurityConfig {
                         // Allow OPTIONS requests (CORS preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         
+                        // Static resources (uploaded images)
+                        .requestMatchers("/uploads/**").permitAll()
+                        
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll()

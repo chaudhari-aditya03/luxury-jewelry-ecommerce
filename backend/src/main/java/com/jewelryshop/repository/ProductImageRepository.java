@@ -2,6 +2,7 @@ package com.jewelryshop.repository;
 
 import com.jewelryshop.entity.ProductImage;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -11,5 +12,6 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
 
     List<ProductImage> findByProductId(Long productId);
 
+    @Modifying
     void deleteByProductId(Long productId);
 }

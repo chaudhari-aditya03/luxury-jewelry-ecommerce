@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -82,5 +83,21 @@ public class CouponServiceImpl implements CouponService {
 
         log.info("Coupon applied. Discount amount: {}", discount);
         return discount;
+    }
+
+    @Override
+    public List<Coupon> getAllCoupons() {
+        log.info("Fetching all coupons");
+        return couponRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public void deleteCoupon(Long id) {
+        log.info("Deleting coupon with id: {}", id);
+        Coupon coupon = couponRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
+        couponRepository.delete(coupon);
+        log.info("Coupon deleted successfully");
     }
 }

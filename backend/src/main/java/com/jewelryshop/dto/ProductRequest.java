@@ -40,5 +40,7 @@ public class ProductRequest {
 
     private List<String> imageUrls;
 
+    private List<ProductImageRequest> images;
+
     private List<ProductVariantRequest> variants;
 }

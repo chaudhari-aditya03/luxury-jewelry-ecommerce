@@ -6,6 +6,8 @@ import com.jewelryshop.exception.BadRequestException;
 import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.*;
 import com.jewelryshop.service.ProductService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +31,9 @@ public class ProductServiceImpl implements ProductService {
     private final ProductImageRepository productImageRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ReviewRepository reviewRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional
@@ -51,17 +56,48 @@ public class ProductServiceImpl implements ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        // Add images
-        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            List<ProductImage> images = new ArrayList<>();
-            for (int i = 0; i < request.getImageUrls().size(); i++) {
+        // Add images (supports both new images list and legacy imageUrls)
+        List<ProductImage> images = new ArrayList<>();
+        int imageCount = 0;
+        final int MAX_IMAGES = 4; // Limit to 4 images (1 main + 3 side views)
+        
+        // First, try to use the new images list (with isPrimary information)
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            for (var imageReq : request.getImages()) {
+                if (imageCount >= MAX_IMAGES) {
+                    log.warn("Maximum of {} images allowed. Skipping additional images.", MAX_IMAGES);
+                    break; // Enforce limit
+                }
+                if (imageReq.getImageUrl() != null && !imageReq.getImageUrl().isEmpty()) {
+                    ProductImage image = new ProductImage();
+                    image.setProduct(savedProduct);
+                    image.setImageUrl(imageReq.getImageUrl());
+                    image.setImageName(imageReq.getImageName());
+                    image.setImagePath(imageReq.getImagePath());
+                    image.setFileSize(imageReq.getFileSize());
+                    image.setMimeType(imageReq.getMimeType());
+                    image.setIsPrimary(imageReq.getIsPrimary() != null ? imageReq.getIsPrimary() : false);
+                    image.setUploadedAt(java.time.LocalDateTime.now());
+                    images.add(image);
+                    imageCount++;
+                }
+            }
+        } 
+        // Fall back to legacy imageUrls list
+        else if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            for (int i = 0; i < Math.min(request.getImageUrls().size(), MAX_IMAGES); i++) {
                 ProductImage image = new ProductImage();
                 image.setProduct(savedProduct);
                 image.setImageUrl(request.getImageUrls().get(i));
                 image.setIsPrimary(i == 0);
+                image.setUploadedAt(java.time.LocalDateTime.now());
                 images.add(image);
             }
+        }
+        
+        if (!images.isEmpty()) {
             productImageRepository.saveAll(images);
+            log.info("Saved {} images for product ID: {}", images.size(), savedProduct.getId());
         }
 
         // Add variants
@@ -105,18 +141,56 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
 
-        // Update images
-        if (request.getImageUrls() != null) {
-            productImageRepository.deleteByProductId(id);
-            List<ProductImage> images = new ArrayList<>();
-            for (int i = 0; i < request.getImageUrls().size(); i++) {
+        // Update images (supports both new images list and legacy imageUrls)
+        // IMPORTANT: Delete old images first and flush to avoid duplicates
+        productImageRepository.deleteByProductId(id);
+        entityManager.flush(); // Force delete to complete before inserts
+        
+        log.info("Deleted old images for product ID: {}", id);
+        
+        List<ProductImage> images = new ArrayList<>();
+        int imageCount = 0;
+        final int MAX_IMAGES = 4; // Limit to 4 images (1 main + 3 side views)
+        
+        // First, try to use the new images list (with isPrimary information)
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            for (var imageReq : request.getImages()) {
+                if (imageCount >= MAX_IMAGES) {
+                    log.warn("Maximum of {} images allowed. Skipping additional images.", MAX_IMAGES);
+                    break; // Enforce limit
+                }
+                if (imageReq.getImageUrl() != null && !imageReq.getImageUrl().isEmpty()) {
+                    ProductImage image = new ProductImage();
+                    image.setProduct(product);
+                    image.setImageUrl(imageReq.getImageUrl());
+                    image.setImageName(imageReq.getImageName());
+                    image.setImagePath(imageReq.getImagePath());
+                    image.setFileSize(imageReq.getFileSize());
+                    image.setMimeType(imageReq.getMimeType());
+                    image.setIsPrimary(imageReq.getIsPrimary() != null ? imageReq.getIsPrimary() : false);
+                    image.setUploadedAt(java.time.LocalDateTime.now());
+                    images.add(image);
+                    imageCount++;
+                }
+            }
+        } 
+        // Fall back to legacy imageUrls list
+        else if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            for (int i = 0; i < Math.min(request.getImageUrls().size(), MAX_IMAGES); i++) {
                 ProductImage image = new ProductImage();
                 image.setProduct(product);
                 image.setImageUrl(request.getImageUrls().get(i));
                 image.setIsPrimary(i == 0);
+                image.setUploadedAt(java.time.LocalDateTime.now());
                 images.add(image);
             }
+        }
+        
+        if (!images.isEmpty()) {
             productImageRepository.saveAll(images);
+            log.info("Saved {} new images for product ID: {}", images.size(), id);
+        } else {
+            log.warn("No images to save for product ID: {}", id);
         }
 
         // Update variants

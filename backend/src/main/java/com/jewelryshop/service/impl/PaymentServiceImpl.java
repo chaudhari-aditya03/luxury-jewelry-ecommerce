@@ -1,6 +1,7 @@
 package com.jewelryshop.service.impl;
 
 import com.jewelryshop.dto.CreatePaymentRequest;
+import com.jewelryshop.dto.PaymentResponse;
 import com.jewelryshop.dto.VerifyPaymentRequest;
 import com.jewelryshop.entity.Order;
 import com.jewelryshop.entity.Payment;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -122,6 +125,28 @@ public class PaymentServiceImpl implements PaymentService {
         orderRepository.save(order);
 
         log.info("Payment status updated successfully");
+    }
+
+    @Override
+    public Page<PaymentResponse> getAllPayments(Pageable pageable) {
+        log.info("Fetching all payments with pagination");
+        Page<Payment> payments = paymentRepository.findAll(pageable);
+        return payments.map(this::mapToPaymentResponse);
+    }
+
+    private PaymentResponse mapToPaymentResponse(Payment payment) {
+        PaymentResponse response = new PaymentResponse();
+        response.setId(payment.getId());
+        response.setOrderId(payment.getOrder().getId());
+        response.setOrderNumber(payment.getOrder().getOrderNumber());
+        response.setUserId(payment.getOrder().getUser().getId());
+        response.setPaymentGateway(payment.getPaymentGateway());
+        response.setTransactionId(payment.getTransactionId());
+        response.setAmount(payment.getAmount());
+        response.setStatus(Payment.PaymentStatus.valueOf(payment.getStatus().name()));
+        response.setOrderPaymentStatus(Order.PaymentStatus.valueOf(payment.getOrder().getPaymentStatus().name()));
+        response.setCreatedAt(payment.getCreatedAt());
+        return response;
     }
 
     private String generateSignature(String orderId, String paymentId, String secret) throws Exception {

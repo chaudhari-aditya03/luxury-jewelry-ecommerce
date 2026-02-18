@@ -5,6 +5,7 @@ import com.jewelryshop.dto.CategoryResponse;
 import com.jewelryshop.entity.Category;
 import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.CategoryRepository;
+import com.jewelryshop.repository.ProductRepository;
 import com.jewelryshop.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
 
     @Override
@@ -30,6 +32,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         Category category = new Category();
         category.setName(request.getName());
+        category.setDescription(request.getDescription());
 
         if (request.getParentId() != null) {
             Category parent = categoryRepository.findById(request.getParentId())
@@ -52,6 +55,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
 
         category.setName(request.getName());
+        category.setDescription(request.getDescription());
 
         if (request.getParentId() != null) {
             Category parent = categoryRepository.findById(request.getParentId())
@@ -101,7 +105,12 @@ public class CategoryServiceImpl implements CategoryService {
         CategoryResponse response = new CategoryResponse();
         response.setId(category.getId());
         response.setName(category.getName());
+        response.setDescription(category.getDescription());
         response.setCreatedAt(category.getCreatedAt());
+
+        // Count products in this category
+        Long productCount = productRepository.countByCategoryId(category.getId());
+        response.setProductCount(productCount.intValue());
 
         if (category.getParent() != null) {
             response.setParentId(category.getParent().getId());
