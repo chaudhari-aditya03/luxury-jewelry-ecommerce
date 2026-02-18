@@ -1,27 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { StarIcon, TruckIcon, ShieldCheckIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { Typography, Row, Col, Button, Spin, Result, Card } from 'antd';
+import { RocketOutlined, SafetyCertificateOutlined, SketchOutlined, CustomerServiceOutlined } from '@ant-design/icons';
 import MainLayout from '../layouts/MainLayout';
-import Button from '../components/common/Button';
+import HeroCarousel from '../components/home/HeroCarousel';
 import ProductCard from '../components/product/ProductCard';
 import { productService } from '../services';
-import { SkeletonProduct } from '../components/common/Skeleton';
+
+const { Title, Paragraph } = Typography;
 
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Mock data for initial display if API fails or is empty
+  const mockProducts = [
+    { id: 101, name: 'Diamond Solitaire Ring', price: 45000, rating: 4.8, category: 'Rings', image: 'https://images.unsplash.com/photo-1605100804763-ebea2406a95f?q=80&w=1935&auto=format&fit=crop' },
+    { id: 102, name: 'Gold Layered Necklace', price: 28000, rating: 4.5, category: 'Necklaces', image: 'https://images.unsplash.com/photo-1599643478518-17488fbbcd75?q=80&w=1974&auto=format&fit=crop' },
+    { id: 103, name: 'Pearl Drop Earrings', price: 12500, rating: 4.6, category: 'Earrings', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1974&auto=format&fit=crop' },
+    { id: 104, name: 'Platinum Wedding Band', price: 35000, rating: 4.9, category: 'Rings', image: 'https://images.unsplash.com/photo-1598560975630-161464a35ccc?q=80&w=1974&auto=format&fit=crop' },
+  ];
+
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
       try {
         setIsLoading(true);
-        const response = await productService.getFeaturedProducts(4);
-        setFeaturedProducts(response.data.data.content || response.data.data || []);
+        // Uncomment when API is ready
+        // const response = await productService.getFeaturedProducts(4);
+        // setFeaturedProducts(response.data.data.content || response.data.data || []);
+
+        // Simulating API call
+        setTimeout(() => {
+          setFeaturedProducts(mockProducts);
+          setIsLoading(false);
+        }, 1000);
+
       } catch (err) {
         console.error('Failed to fetch featured products:', err);
         setError('Failed to load featured products');
-      } finally {
         setIsLoading(false);
       }
     };
@@ -29,145 +45,60 @@ const HomePage = () => {
     fetchFeaturedProducts();
   }, []);
 
+  const features = [
+    { icon: <RocketOutlined style={{ fontSize: 36, color: '#D4AF37' }} />, title: 'Free Shipping', desc: 'On all orders above ₹5000' },
+    { icon: <SafetyCertificateOutlined style={{ fontSize: 36, color: '#D4AF37' }} />, title: 'Certified Authenticity', desc: '100% Hallmark Certified' },
+    { icon: <SketchOutlined style={{ fontSize: 36, color: '#D4AF37' }} />, title: 'Premium Quality', desc: 'Handcrafted Perfection' },
+    { icon: <CustomerServiceOutlined style={{ fontSize: 36, color: '#D4AF37' }} />, title: '24/7 Support', desc: 'Dedicated Customer Care' }
+  ];
+
   return (
     <MainLayout>
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-rose-gold-500 to-rose-gold-600 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-white rounded-full mix-blend-multiply filter blur-xl"></div>
-          <div className="absolute -bottom-8 right-20 w-72 h-72 bg-white rounded-full mix-blend-multiply filter blur-xl"></div>
-        </div>
+      <HeroCarousel />
 
-        <div className="container-custom relative z-10 py-20 md:py-32">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h1 className="font-display text-5xl md:text-6xl font-bold leading-tight">
-                Timeless Elegance
-              </h1>
-              <p className="text-lg text-gray-100 max-w-lg">
-                Discover our exquisite collection of handcrafted jewelry. Each piece tells a story of luxury, craftsmanship, and timeless beauty.
-              </p>
-              <div className="flex gap-4">
-                <Link to="/shop">
-                  <Button size="lg" variant="primary" className="bg-white text-rose-gold-500 hover:bg-gray-100">
-                    Shop Now
-                  </Button>
-                </Link>
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                  Learn More
-                </Button>
-              </div>
-            </div>
-            <div className="hidden md:block">
-              <img
-                src="https://via.placeholder.com/500x500?text=Premium+Jewelry"
-                alt="Premium Jewelry"
-                className="w-full rounded-lg shadow-premium"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Features */}
-      <div className="section bg-gray-50 dark:bg-gray-800">
-        <div className="container-custom">
-          <h2 className="text-center text-3xl font-bold mb-12">Why Choose Us</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="card p-8 text-center">
-              <div className="w-16 h-16 bg-gold-100 dark:bg-gold-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TruckIcon className="w-8 h-8 text-rose-gold-500" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">Free Shipping</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">On orders above ₹5,000</p>
-            </div>
-
-            <div className="card p-8 text-center">
-              <div className="w-16 h-16 bg-gold-100 dark:bg-gold-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShieldCheckIcon className="w-8 h-8 text-rose-gold-500" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">Authentic</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">100% certified jewelry</p>
-            </div>
-
-            <div className="card p-8 text-center">
-              <div className="w-16 h-16 bg-gold-100 dark:bg-gold-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <SparklesIcon className="w-8 h-8 text-rose-gold-500" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">Premium Quality</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Handcrafted by experts</p>
-            </div>
-
-            <div className="card p-8 text-center">
-              <div className="w-16 h-16 bg-gold-100 dark:bg-gold-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <StarIcon className="w-8 h-8 text-rose-gold-500" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">Customer Support</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">24/7 dedicated support</p>
-            </div>
-          </div>
-        </div>
+      {/* Benefits Section */}
+      <div style={{ padding: '60px 0', background: '#fff' }}>
+        <Row gutter={[32, 32]} justify="center">
+          {features.map((feature, index) => (
+            <Col xs={24} sm={12} md={6} key={index} style={{ textAlign: 'center' }}>
+              <Card bordered={false} hoverable style={{ borderRadius: 12 }}>
+                <div style={{ marginBottom: 16 }}>{feature.icon}</div>
+                <Title level={4} style={{ marginBottom: 8 }}>{feature.title}</Title>
+                <Paragraph type="secondary">{feature.desc}</Paragraph>
+              </Card>
+            </Col>
+          ))}
+        </Row>
       </div>
 
       {/* Featured Products */}
-      <div className="section">
-        <div className="container-custom">
-          <h2 className="text-center text-3xl font-bold mb-12">Featured Collection</h2>
-          
-          {error && (
-            <div className="text-center text-red-600 mb-8">{error}</div>
-          )}
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isLoading ? (
-              <>
-                <SkeletonProduct />
-                <SkeletonProduct />
-                <SkeletonProduct />
-                <SkeletonProduct />
-              </>
-            ) : featuredProducts.length > 0 ? (
-              featuredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={(id) => console.log('Add to cart:', id)}
-                  onAddToWishlist={(id) => console.log('Add to wishlist:', id)}
-                />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <p className="text-gray-600 dark:text-gray-400">No featured products available</p>
-              </div>
-            )}
-          </div>
-          <div className="text-center mt-12">
-            <Link to="/shop">
-              <Button size="lg">View All Products</Button>
-            </Link>
-          </div>
+      <div style={{ padding: '60px 0' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <Title level={2} style={{ fontFamily: "'Playfair Display', serif" }}>Featured Collection</Title>
+          <Paragraph type="secondary" style={{ fontSize: 16 }}>Handpicked luxury just for you</Paragraph>
         </div>
-      </div>
 
-      {/* Newsletter */}
-      <div className="section bg-gray-900 text-white">
-        <div className="container-custom max-w-2xl">
-          <div className="text-center space-y-6">
-            <h2 className="text-4xl font-bold">Subscribe to Our Newsletter</h2>
-            <p className="text-gray-300 text-lg">
-              Get exclusive offers and updates on our latest collections
-            </p>
-            <form className="flex gap-3" onSubmit={(e) => e.preventDefault()}>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-rose-gold-500 focus:outline-none"
-              />
-              <Button variant="primary" size="md">
-                Subscribe
-              </Button>
-            </form>
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: 50 }}>
+            <Spin size="large" />
           </div>
+        ) : error ? (
+          <Result status="warning" title={error} />
+        ) : (
+          <Row gutter={[24, 24]}>
+            {featuredProducts.map(product => (
+              <Col xs={24} sm={12} md={6} key={product.id}>
+                <ProductCard product={product} />
+              </Col>
+            ))}
+          </Row>
+        )}
+
+        <div style={{ textAlign: 'center', marginTop: 40 }}>
+          <Button type="primary" size="large" style={{ padding: '0 40px' }}>
+            View All Collection
+          </Button>
         </div>
       </div>
     </MainLayout>

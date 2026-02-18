@@ -43,8 +43,8 @@ export const cartService = {
   addToCart: (productId, quantity = 1, variantId = null) =>
     apiClient.post('/cart/add', { productId, quantity, variantId }),
 
-  updateCartItem: (cartItemId, quantity) =>
-    apiClient.put('/cart/update', { cartItemId, quantity }),
+  updateCartItem: (productId, quantity) =>
+    apiClient.put('/cart/update', { productId, quantity }),
 
   removeFromCart: (productId) =>
     apiClient.delete(`/cart/remove/${productId}`),
@@ -52,11 +52,8 @@ export const cartService = {
   clearCart: () =>
     apiClient.delete('/cart/clear'),
 
-  applyCoupon: (code) =>
-    apiClient.post('/cart/coupon/apply', { code }),
-
-  removeCoupon: () =>
-    apiClient.delete('/cart/coupon/remove'),
+  applyCoupon: (code, orderAmount) =>
+    apiClient.post('/coupons/apply', null, { params: { code, orderAmount } }),
 };
 
 export const orderService = {
@@ -84,7 +81,7 @@ export const userService = {
     apiClient.get('/users/profile'),
 
   updateProfile: (userData) =>
-    apiClient.put('/users/profile', userData),
+    apiClient.put('/users/update', userData),
 
   addAddress: (addressData) =>
     apiClient.post('/addresses', addressData),
@@ -99,7 +96,7 @@ export const userService = {
     apiClient.get('/addresses'),
 
   addToWishlist: (productId) =>
-    apiClient.post('/wishlist/add', { productId }),
+    apiClient.post('/wishlist/add', null, { params: { productId } }),
 
   removeFromWishlist: (productId) =>
     apiClient.delete(`/wishlist/remove/${productId}`),
@@ -161,12 +158,30 @@ export const adminService = {
   createCoupon: (couponData) =>
     apiClient.post('/admin/coupons', couponData),
 
+  getAllCoupons: () =>
+    apiClient.get('/admin/coupons'),
+
+  deleteCoupon: (id) =>
+    apiClient.delete(`/admin/coupons/${id}`),
+
+  uploadProductImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post('/admin/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
   // Analytics
   getDashboardSummary: () =>
     apiClient.get('/admin/analytics/summary'),
 
   getMonthlySales: (year = 2026) =>
     apiClient.get('/admin/analytics/monthly', { params: { year } }),
+
+  // Payment Management
+  getAllPayments: (page = 0, size = 10) =>
+    apiClient.get('/payment/admin/payments', { params: { page, size } }),
 };
 
 export const categoryService = {

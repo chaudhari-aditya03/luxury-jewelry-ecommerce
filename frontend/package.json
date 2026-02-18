@@ -10,10 +10,13 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@headlessui/react": "^1.7.19",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^3.3.4",
+    "antd": "^6.3.0",
     "axios": "^1.6.5",
+    "google-picker": "^0.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.50.1",

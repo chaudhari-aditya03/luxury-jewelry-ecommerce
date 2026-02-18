@@ -1,239 +1,252 @@
 import React, { useState, useEffect } from 'react';
-import { FunnelIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import {
+  Layout, Row, Col, Card, Typography, Input, Select, Slider,
+  Checkbox, Radio, Button, Pagination, Empty, Spin, Breadcrumb,
+  Collapse, theme, Drawer, Space
+} from 'antd';
+import { FilterOutlined, SearchOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import ProductCard from '../components/product/ProductCard';
-import Pagination from '../components/common/Pagination';
-import Alert from '../components/common/Alert';
-import Input from '../components/common/Input';
-import Select from '../components/common/Select';
-import { SkeletonProduct } from '../components/common/Skeleton';
-import { productService } from '../services';
+import { productService, cartService } from '../services';
+import { useAuth } from '../context/AuthContext';
+import { getImageUrl } from '../utils/helpers';
+
+const { Title, Text } = Typography;
+const { Sider, Content } = Layout;
+const { Panel } = Collapse;
+const { Search } = Input;
+const { Option } = Select;
 
 const ShopPage = () => {
+  const { token } = theme.useToken();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [filters, setFilters] = useState({
     search: '',
-    category: '',
-    priceRange: 'all',
+    category: [],
+    priceRange: [0, 1000000],
+    rating: 0,
     sortBy: 'newest',
   });
-  const [currentPage, setCurrentPage] = useState(0); // Backend uses 0-indexed pages
-  const [isLoading, setIsLoading] = useState(true);
+  const [mobileFilterVisible, setMobileFilterVisible] = useState(false);
   const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const pageSize = 12;
   const [categories, setCategories] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const [error, setError] = useState('');
-  const itemsPerPage = 12;
 
-  // Fetch categories on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await productService.getCategories();
-        setCategories(response.data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
     fetchCategories();
   }, []);
 
-  // Fetch products when filters or page changes
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
-        
-        const params = {
-          page: currentPage,
-          size: itemsPerPage,
-          search: filters.search || undefined,
-          categoryId: filters.category || undefined,
-          minPrice: filters.priceRange === 'budget' ? 0 : filters.priceRange === 'mid' ? 15000 : filters.priceRange === 'premium' ? 35000 : undefined,
-          maxPrice: filters.priceRange === 'budget' ? 15000 : filters.priceRange === 'mid' ? 35000 : filters.priceRange === 'premium' ? 1000000 : undefined,
-          sortBy: filters.sortBy,
-        };
-
-        console.log('Fetching products with params:', params);
-        const response = await productService.getAllProducts(params.page, params.size, params);
-        console.log('Products API Response:', response.data);
-        
-        const data = response.data.data;
-        
-        if (data && data.content) {
-          console.log('Products received:', data.content.length);
-          setProducts(data.content);
-          setTotalPages(data.totalPages || 0);
-          setTotalElements(data.totalElements || 0);
-        } else {
-          console.warn('Unexpected response structure:', data);
-          setProducts([]);
-          setError('Unexpected response format from server');
-        }
-      } catch (error) {
-        console.error('Failed to fetch products:', error);
-        console.error('Error details:', error.response?.data || error.message);
-        setProducts([]);
-        setError(error.response?.data?.message || 'Failed to load products. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchProducts();
   }, [filters, currentPage]);
 
-  return (
-    <MainLayout>
-      <div className="section">
-        <div className="container-custom">
-          {/* Header */}
-          <h1 className="text-4xl font-bold mb-2">Shop Our Collection</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-8">
-            {totalElements} products available
-          </p>
+  const fetchCategories = async () => {
+    try {
+      const response = await productService.getCategories();
+      const items = response.data?.data || [];
+      setCategories(items.map((item) => ({
+        label: item.name,
+        value: item.id,
+      })));
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      setCategories([]);
+    }
+  };
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar Filters */}
-            <div className="lg:sticky lg:top-24 h-max">
-              <div className="card p-6 space-y-6">
-                <h2 className="font-bold text-lg flex items-center gap-2">
-                  <FunnelIcon className="w-5 h-5" />
-                  Filters
-                </h2>
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const categoryId = filters.category.length > 0 ? filters.category[0] : undefined;
+      const minPrice = filters.priceRange?.[0];
+      const maxPrice = filters.priceRange?.[1];
 
-                {/* Search */}
-                <div>
-                  <Input
-                    placeholder="Search products..."
-                    value={filters.search}
-                    onChange={(e) => {
-                      setFilters({ ...filters, search: e.target.value });
-                      setCurrentPage(0);
-                    }}
-                  />
-                </div>
+      const response = await productService.getAllProducts(currentPage - 1, pageSize, {
+        search: filters.search || undefined,
+        categoryId,
+        minPrice,
+        maxPrice,
+        sortBy: filters.sortBy,
+      });
 
-                {/* Category */}
-                <Select
-                  label="Category"
-                  placeholder="All Categories"
-                  options={[
-                    ...categories.map(cat => ({ 
-                      label: cat.name, 
-                      value: cat.id 
-                    }))
-                  ]}
-                  value={filters.category}
-                  onChange={(e) => {
-                    setFilters({ ...filters, category: e.target.value });
-                    setCurrentPage(0);
-                  }}
-                />
+      const pageData = response.data?.data;
+      const content = pageData?.content || [];
 
-                {/* Price Range */}
-                <Select
-                  label="Price Range"
-                  options={[
-                    { label: 'All Prices', value: 'all' },
-                    { label: 'Budget (< ₹15k)', value: 'budget' },
-                    { label: 'Mid-range (₹15k - ₹35k)', value: 'mid' },
-                    { label: 'Premium (> ₹35k)', value: 'premium' },
-                  ]}
-                  value={filters.priceRange}
-                  onChange={(e) => {
-                    setFilters({ ...filters, priceRange: e.target.value });
-                    setCurrentPage(0);
-                  }}
-                />
+      setProducts(content.map((product) => ({
+        id: product.id,
+        name: product.name,
+        price: Number(product.discountPrice ?? product.price ?? 0),
+        rating: product.averageRating ?? 0,
+        category: product.categoryName || 'Jewelry',
+        image: getImageUrl(product.images?.find((img) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl),
+      })));
+      setTotalItems(pageData?.totalElements ?? 0);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    }
+    setIsLoading(false);
+  };
 
-                {/* Sort */}
-                <Select
-                  label="Sort By"
-                  options={[
-                    { label: 'Newest', value: 'newest' },
-                    { label: 'Price: Low to High', value: 'price-asc' },
-                    { label: 'Price: High to Low', value: 'price-desc' },
-                    { label: 'Rating', value: 'rating' },
-                  ]}
-                  value={filters.sortBy}
-                  onChange={(e) => {
-                    setFilters({ ...filters, sortBy: e.target.value });
-                    setCurrentPage(0);
-                  }}
-                />
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
 
-                <button
-                  onClick={() => {
-                    setFilters({
-                      search: '',
-                      category: '',
-                      priceRange: 'all',
-                      sortBy: 'newest',
-                    });
-                    setCurrentPage(0);
-                  }}
-                  className="w-full py-2 text-rose-gold-500 hover:bg-rose-gold-50 dark:hover:bg-rose-gold-900/10 rounded-lg transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            </div>
+  const handleAddToCart = async (productId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
 
-            {/* Products Grid */}
-            <div className="lg:col-span-3">
-              {error && (
-                <Alert
-                  type="error"
-                  message={error}
-                  closeable={true}
-                  onClose={() => setError('')}
-                />
-              )}
+    try {
+      await cartService.addToCart(productId, 1, null);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
+  };
 
-              {isLoading && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <SkeletonProduct key={i} />
-                  ))}
-                </div>
-              )}
+  const FilterContent = () => (
+    <div style={{ padding: '0 10px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={5}>Categories</Title>
+        <Checkbox.Group
+          options={categories}
+          value={filters.category}
+          onChange={v => handleFilterChange('category', v)}
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        />
+      </div>
 
-              {!isLoading && products.length > 0 && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {products.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={(id) => console.log('Add to cart:', id)}
-                        onAddToWishlist={(id) => console.log('Add to wishlist:', id)}
-                      />
-                    ))}
-                  </div>
-
-                  {totalPages > 1 && (
-                    <Pagination
-                      currentPage={currentPage + 1}
-                      totalPages={totalPages}
-                      onPageChange={(page) => setCurrentPage(page - 1)}
-                    />
-                  )}
-                </>
-              )}
-
-              {!isLoading && products.length === 0 && (
-                <Alert
-                  type="info"
-                  message="No products found matching your filters. Try adjusting your search criteria."
-                  closeable={false}
-                />
-              )}
-            </div>
-          </div>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={5}>Price Range</Title>
+        <Slider
+          range
+          min={0}
+          max={100000}
+          step={1000}
+          defaultValue={[0, 100000]}
+          onAfterChange={v => handleFilterChange('priceRange', v)}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Text type="secondary">₹0</Text>
+          <Text type="secondary">₹1,00,000+</Text>
         </div>
       </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <Title level={5}>Rating</Title>
+        <Radio.Group
+          onChange={e => handleFilterChange('rating', e.target.value)}
+          value={filters.rating}
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        >
+          <Radio value={4}>4 Stars & Up</Radio>
+          <Radio value={3}>3 Stars & Up</Radio>
+          <Radio value={2}>2 Stars & Up</Radio>
+          <Radio value={0}>Any Rating</Radio>
+        </Radio.Group>
+      </div>
+
+      <Button
+        block
+        onClick={() => setFilters({ search: '', category: [], priceRange: [0, 1000000], rating: 0, sortBy: 'newest' })}
+      >
+        Clear Filters
+      </Button>
+    </div>
+  );
+
+  return (
+    <MainLayout>
+      <div style={{ paddingBottom: 20 }}>
+        <Breadcrumb items={[{ title: 'Home', href: '/' }, { title: 'Shop' }]} style={{ marginBottom: 20 }} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <Title level={2} style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Shop Collection</Title>
+          <Button
+            icon={<FilterOutlined />}
+            className="md:hidden"
+            onClick={() => setMobileFilterVisible(true)}
+          >
+            Filters
+          </Button>
+        </div>
+
+        <Layout style={{ background: '#fff' }}>
+          {/* Desktop Sidebar */}
+          <Sider width={280} theme="light" style={{ background: '#fff', paddingRight: 24 }} className="hidden md:block">
+            <FilterContent />
+          </Sider>
+
+          <Content style={{ background: '#fff' }}>
+            {/* Toolbar */}
+            <Card styles={{ body: { padding: '12px 24px' } }} style={{ marginBottom: 24, borderRadius: 8 }}>
+              <Row justify="space-between" align="middle" gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <Text>{totalItems} Products Found</Text>
+                </Col>
+                <Col xs={24} sm={12} style={{ textAlign: 'right' }}>
+                  <Space>
+                    <Text>Sort By:</Text>
+                    <Select
+                      defaultValue="newest"
+                      style={{ width: 150 }}
+                      onChange={v => handleFilterChange('sortBy', v)}
+                    >
+                      <Option value="newest">Newest Arrivals</Option>
+                      <Option value="price-asc">Price: Low to High</Option>
+                      <Option value="price-desc">Price: High to Low</Option>
+                      <Option value="rating">Top Rated</Option>
+                    </Select>
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
+
+            {/* Products */}
+            {isLoading ? (
+              <div style={{ textAlign: 'center', padding: 50 }}>
+                <Spin size="large" />
+              </div>
+            ) : products.length > 0 ? (
+              <>
+                <Row gutter={[24, 24]}>
+                  {products.map(product => (
+                    <Col xs={24} sm={12} lg={8} key={product.id}>
+                      <ProductCard product={product} onAddToCart={handleAddToCart} />
+                    </Col>
+                  ))}
+                </Row>
+                <div style={{ marginTop: 40, textAlign: 'center' }}>
+                  <Pagination
+                    current={currentPage}
+                    total={totalItems}
+                    pageSize={pageSize}
+                    onChange={p => setCurrentPage(p)}
+                    showSizeChanger={false}
+                  />
+                </div>
+              </>
+            ) : (
+              <Empty description="No products found" />
+            )}
+          </Content>
+        </Layout>
+      </div>
+
+      <Drawer
+        title="Filters"
+        placement="left"
+        onClose={() => setMobileFilterVisible(false)}
+        open={mobileFilterVisible}
+      >
+        <FilterContent />
+      </Drawer>
     </MainLayout>
   );
 };

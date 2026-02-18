@@ -1,78 +1,155 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import {
+  Steps, Form, Input, Button, Radio, Row, Col, Card,
+  Typography, message, Result, Divider, Space
+} from 'antd';
+import {
+  UserOutlined, EnvironmentOutlined, CreditCardOutlined,
+  CheckCircleOutlined, ShopOutlined
+} from '@ant-design/icons';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import Select from '../components/common/Select';
-import RadioGroup from '../components/common/RadioGroup';
-import Alert from '../components/common/Alert';
 import { formatPrice } from '../utils/helpers';
-import { validatePhone } from '../utils/helpers';
+
+const { Title, Text, Paragraph } = Typography;
+const { Step } = Steps;
 
 const CheckoutPage = () => {
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      state: '',
-      pincode: '',
-    },
-  });
+  const [loading, setLoading] = useState(false);
+  const [orderId, setOrderId] = useState(null);
 
-  // Dummy order data
-  const cartTotal = 95000;
-  const shipping = 0;
-  const total = cartTotal + shipping;
+  const onFinish = (values) => {
+    setLoading(true);
+    console.log('Order Details:', values);
 
-  const onSubmit = async (data) => {
-    // Simulate order placement
-    console.log('Order data:', { ...data, paymentMethod });
-    setOrderPlaced(true);
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false);
+      setOrderId('ORD-2026-' + Math.floor(Math.random() * 10000));
+      setCurrentStep(2);
+    }, 1500);
   };
 
-  if (orderPlaced) {
+  const next = () => {
+    form.validateFields().then(() => {
+      setCurrentStep(currentStep + 1);
+    }).catch(err => {
+      message.error('Please fill in all required fields');
+    });
+  };
+
+  const prev = () => {
+    setCurrentStep(currentStep - 1);
+  };
+
+  const steps = [
+    {
+      title: 'Shipping Details',
+      icon: <EnvironmentOutlined />,
+      content: (
+        <div style={{ marginTop: 40 }}>
+          <Title level={4}>Shipping Address</Title>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="firstName" rules={[{ required: true, message: 'First name required' }]}>
+                <Input prefix={<UserOutlined />} placeholder="First Name" size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="lastName" rules={[{ required: true, message: 'Last name required' }]}>
+                <Input prefix={<UserOutlined />} placeholder="Last Name" size="large" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Valid email required' }]}>
+            <Input placeholder="Email Address" size="large" />
+          </Form.Item>
+          <Form.Item name="phone" rules={[{ required: true, message: 'Phone number required' }]}>
+            <Input placeholder="Phone Number" size="large" />
+          </Form.Item>
+          <Form.Item name="address" rules={[{ required: true, message: 'Address required' }]}>
+            <Input.TextArea placeholder="Street Address" rows={3} />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="city" rules={[{ required: true, message: 'City required' }]}>
+                <Input placeholder="City" size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="state" rules={[{ required: true, message: 'State required' }]}>
+                <Input placeholder="State" size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="pincode" rules={[{ required: true, message: 'Pincode required' }]}>
+                <Input placeholder="Pincode" size="large" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </div>
+      )
+    },
+    {
+      title: 'Payment',
+      icon: <CreditCardOutlined />,
+      content: (
+        <div style={{ marginTop: 40 }}>
+          <Title level={4}>Select Payment Method</Title>
+          <Form.Item name="paymentMethod" initialValue="upi">
+            <Radio.Group style={{ width: '100%' }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Radio.Button value="upi" style={{ height: 60, display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Space size="large">
+                    <CreditCardOutlined />
+                    <span>UPI / Net Banking</span>
+                  </Space>
+                </Radio.Button>
+                <Radio.Button value="card" style={{ height: 60, display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Space size="large">
+                    <CreditCardOutlined />
+                    <span>Credit / Debit Card</span>
+                  </Space>
+                </Radio.Button>
+                <Radio.Button value="cod" style={{ height: 60, display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Space size="large">
+                    <ShopOutlined />
+                    <span>Cash on Delivery</span>
+                  </Space>
+                </Radio.Button>
+              </Space>
+            </Radio.Group>
+          </Form.Item>
+        </div>
+      )
+    },
+    {
+      title: 'Done',
+      icon: <CheckCircleOutlined />,
+      content: null // Handled separately
+    }
+  ];
+
+  if (currentStep === 2) {
     return (
       <MainLayout>
-        <div className="section">
-          <div className="container-custom max-w-2xl text-center">
-            <div className="card p-12 space-y-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <h1 className="text-4xl font-bold">Order Confirmed!</h1>
-              <p className="text-gray-600 dark:text-gray-400 text-lg">
-                Thank you for your purchase. Your order has been placed successfully.
-              </p>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 space-y-2 text-left">
-                <p>
-                  <strong>Order ID:</strong> ORD-2024-001234
-                </p>
-                <p>
-                  <strong>Total Amount:</strong> {formatPrice(total)}
-                </p>
-                <p>
-                  <strong>Estimated Delivery:</strong> 3-5 business days
-                </p>
-              </div>
-              <Button size="lg" onClick={() => navigate('/account/orders')}>
-                View My Orders
-              </Button>
-            </div>
-          </div>
+        <div style={{ padding: '60px 0' }}>
+          <Result
+            status="success"
+            title="Order Successfully Placed!"
+            subTitle={`Order number: ${orderId}. We have sent the confirmation to your email.`}
+            extra={[
+              <Link to="/shop" key="shop">
+                <Button type="primary" key="console">
+                  Continue Shopping
+                </Button>
+              </Link>,
+              <Button key="buy" onClick={() => navigate('/account/orders')}>View Orders</Button>,
+            ]}
+          />
         </div>
       </MainLayout>
     );
@@ -80,150 +157,58 @@ const CheckoutPage = () => {
 
   return (
     <MainLayout>
-      <div className="section">
-        <div className="container-custom max-w-4xl">
-          <h1 className="text-4xl font-bold mb-8">Checkout</h1>
+      <div style={{ padding: '40px 0', maxWidth: 1000, margin: '0 auto' }}>
+        <Title level={2} style={{ textAlign: 'center', marginBottom: 40, fontFamily: "'Playfair Display', serif" }}>Checkout</Title>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Checkout Form */}
-            <div className="lg:col-span-2">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                {/* Shipping Address */}
-                <div className="card p-6">
-                  <h2 className="text-xl font-bold mb-6">Shipping Address</h2>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        label="First Name"
-                        error={errors.firstName?.message}
-                        {...register('firstName', { required: 'Required' })}
-                      />
-                      <Input
-                        label="Last Name"
-                        error={errors.lastName?.message}
-                        {...register('lastName', { required: 'Required' })}
-                      />
-                    </div>
-                    <Input
-                      label="Email"
-                      type="email"
-                      error={errors.email?.message}
-                      {...register('email', { required: 'Required' })}
-                    />
-                    <Input
-                      label="Phone"
-                      error={errors.phone?.message}
-                      {...register('phone', {
-                        required: 'Required',
-                        validate: (v) => validatePhone(v) || 'Invalid phone',
-                      })}
-                    />
-                    <Input
-                      label="Address"
-                      error={errors.address?.message}
-                      {...register('address', { required: 'Required' })}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        label="City"
-                        error={errors.city?.message}
-                        {...register('city', { required: 'Required' })}
-                      />
-                      <Input
-                        label="State"
-                        error={errors.state?.message}
-                        {...register('state', { required: 'Required' })}
-                      />
-                    </div>
-                    <Input
-                      label="Pincode"
-                      error={errors.pincode?.message}
-                      {...register('pincode', { required: 'Required' })}
-                    />
-                  </div>
+        <Steps current={currentStep} items={steps.map(s => ({ title: s.title, icon: s.icon }))} />
+
+        <Row gutter={[40, 40]} style={{ marginTop: 40 }}>
+          <Col xs={24} lg={16}>
+            <Card variant="borderless" style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <Form form={form} layout="vertical" onFinish={onFinish}>
+                {steps[currentStep].content}
+              </Form>
+            </Card>
+          </Col>
+
+          <Col xs={24} lg={8}>
+            <Card title="Order Summary" variant="borderless" style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Text>Items (3)</Text>
+                  <Text strong>{formatPrice(70000)}</Text>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Text>Shipping</Text>
+                  <Text type="success">Free</Text>
+                </div>
+                <Divider style={{ margin: '10px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Title level={4}>Total</Title>
+                  <Title level={4} style={{ color: '#D4AF37' }}>{formatPrice(70000)}</Title>
                 </div>
 
-                {/* Payment Method */}
-                <div className="card p-6">
-                  <h2 className="text-xl font-bold mb-6">Payment Method</h2>
-                  <div className="space-y-3">
-                    {[
-                      { id: 'upi', label: 'UPI (Recommended)' },
-                      { id: 'card', label: 'Debit/Credit Card' },
-                      { id: 'cod', label: 'Cash on Delivery' },
-                    ].map((method) => (
-                      <label key={method.id} className="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-rose-gold-50 dark:hover:bg-rose-gold-900/10 transition-colors">
-                        <input
-                          type="radio"
-                          name="payment"
-                          value={method.id}
-                          checked={paymentMethod === method.id}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="w-4 h-4 text-rose-gold-500"
-                        />
-                        <span className="font-medium">{method.label}</span>
-                      </label>
-                    ))}
-                  </div>
+                <div style={{ marginTop: 20 }}>
+                  {currentStep < 1 && (
+                    <Button type="primary" block size="large" onClick={next}>
+                      Proceed to Payment
+                    </Button>
+                  )}
+                  {currentStep === 1 && (
+                    <Space style={{ width: '100%' }}>
+                      <Button size="large" onClick={prev} style={{ width: '100px' }}>
+                        Back
+                      </Button>
+                      <Button type="primary" block size="large" loading={loading} onClick={() => form.submit()}>
+                        Place Order
+                      </Button>
+                    </Space>
+                  )}
                 </div>
-
-                {/* Terms */}
-                <label className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <input type="checkbox" className="mt-1" required />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    I agree to the terms and conditions and have read the privacy policy
-                  </span>
-                </label>
-
-                <Button type="submit" variant="primary" size="lg" className="w-full">
-                  Place Order
-                </Button>
-              </form>
-            </div>
-
-            {/* Order Summary */}
-            <div className="lg:sticky lg:top-24 h-max">
-              <div className="card p-6 space-y-6">
-                <h2 className="font-bold text-xl">Order Summary</h2>
-
-                {/* Items */}
-                <div className="space-y-3 border-b border-gray-200 dark:border-gray-700 pb-6">
-                  <div className="flex justify-between text-sm">
-                    <span>Diamond Ring x1</span>
-                    <span>{formatPrice(45000)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Gold Necklace x2</span>
-                    <span>{formatPrice(50000)}</span>
-                  </div>
-                </div>
-
-                {/* Totals */}
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>{formatPrice(cartTotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span className="text-green-600">FREE</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg border-t border-gray-200 dark:border-gray-700 pt-3">
-                    <span>Total</span>
-                    <span className="text-rose-gold-500">{formatPrice(total)}</span>
-                  </div>
-                </div>
-
-                {/* Trust Badges */}
-                <Alert
-                  type="info"
-                  message="Your payment is secure and encrypted"
-                  closeable={false}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+              </Space>
+            </Card>
+          </Col>
+        </Row>
       </div>
     </MainLayout>
   );

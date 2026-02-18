@@ -47,6 +47,35 @@ export const validateEmail = (email) => {
   return emailRegex.test(email);
 };
 
+/**
+ * Converts image filename or path to full URL
+ * Handles both legacy paths (/uploads/file.jpg) and new filenames (file.jpg)
+ * @param {string} imageUrl - Image filename or path from database
+ * @returns {string} - Full absolute URL to image
+ */
+export const getImageUrl = (imageUrl) => {
+  // Return placeholder if no image
+  if (!imageUrl) return 'https://via.placeholder.com/300';
+  
+  // If it's already a full URL (http/https), return as is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Get backend base URL
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  const BASE_URL = API_BASE.replace('/api', '');
+  
+  // Handle both cases:
+  // 1. Legacy: "/uploads/filename.jpg" -> use as is
+  // 2. New: "filename.jpg" -> prepend "/uploads/"
+  const imagePath = imageUrl.startsWith('/uploads/') 
+    ? imageUrl 
+    : `/uploads/${imageUrl}`;
+  
+  return BASE_URL + imagePath;
+};
+
 export const validatePassword = (password) => {
   // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);

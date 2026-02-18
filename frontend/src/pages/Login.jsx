@@ -1,169 +1,100 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { Form, Input, Button, Checkbox, Typography, Card, Alert, message, Divider } from 'antd';
+import { UserOutlined, LockOutlined, GoogleOutlined } from '@ant-design/icons';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import Alert from '../components/common/Alert';
 import { useAuth } from '../context/AuthContext';
-import { validateEmail } from '../utils/helpers';
+
+const { Title, Text } = Typography;
 
 const LoginPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [generalError, setGeneralError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { login, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
 
-  const onSubmit = async (data) => {
+  const onFinish = async (values) => {
+    setLoading(true);
     try {
-      setGeneralError(null);
-      const authData = await login(data.email, data.password);
-      
-      // Redirect based on user role
-      if (authData.user.role === 'ADMIN') {
+      const authData = await login(values.email, values.password);
+      message.success('Login successful!');
+      const userRole = authData?.user?.role;
+      if (userRole === 'ADMIN' || userRole === 'admin' || isAdmin) {
         navigate('/admin');
       } else {
-        navigate('/account');
+        navigate('/shop');
       }
     } catch (error) {
-      setGeneralError(error.response?.data?.message || 'Login failed. Please try again.');
+      message.error('Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <MainLayout>
-      <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md">
-          <div className="card p-8 md:p-12">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Welcome Back
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Sign in to your account to continue
-              </p>
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
+        <Card
+          style={{ width: '100%', maxWidth: 450, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+          styles={{ body: { padding: 40 } }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: 30 }}>
+            <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #D4AF37 0%, #b8860b 100%)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', margin: '0 auto 16px', fontSize: 24 }}>
+              💎
             </div>
-
-            {/* Alert */}
-            {generalError && (
-              <Alert
-                type="error"
-                message={generalError}
-                onClose={() => setGeneralError(null)}
-                closeable
-              />
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Email */}
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="you@example.com"
-                icon={<EnvelopeIcon className="w-5 h-5 text-gray-400" />}
-                error={errors.email?.message}
-                {...register('email', {
-                  required: 'Email is required',
-                  validate: (value) =>
-                    validateEmail(value) || 'Please enter a valid email',
-                })}
-              />
-
-              {/* Password */}
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  icon={<LockClosedIcon className="w-5 h-5 text-gray-400" />}
-                  error={errors.password?.message}
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters',
-                    },
-                  })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-10 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <EyeSlashIcon className="w-5 h-5" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-
-              {/* Remember & Forgot */}
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded" />
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Remember me
-                  </span>
-                </label>
-                <a
-                  href="#forgot"
-                  className="text-rose-gold-500 hover:text-rose-gold-600 font-medium"
-                >
-                  Forgot password?
-                </a>
-              </div>
-
-              {/* Submit */}
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="w-full"
-              >
-                Sign In
-              </Button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white dark:bg-gray-800 text-gray-500">
-                  or
-                </span>
-              </div>
-            </div>
-
-            {/* Demo Account */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
-    
-            </div>
-
-            {/* Sign Up Link */}
-            <p className="text-center text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                  className="text-rose-gold-500 hover:text-rose-gold-600 font-medium"
-              >
-                Sign up
-              </Link>
-            </p>
+            <Title level={2}>Welcome Back</Title>
+            <Text type="secondary">Sign in to your luxury account</Text>
           </div>
-        </div>
+
+          <Form
+            name="login"
+            initialValues={{ remember: true }}
+            onFinish={onFinish}
+            layout="vertical"
+            size="large"
+          >
+            <Form.Item
+              name="email"
+              rules={[
+                { required: true, message: 'Please input your Email!' },
+                { type: 'email', message: 'Please enter a valid email!' }
+              ]}
+            >
+              <Input prefix={<UserOutlined />} placeholder="Email Address" />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: 'Please input your Password!' }]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="Password" />
+            </Form.Item>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
+              <Form.Item name="remember" valuePropName="checked" noStyle>
+                <Checkbox>Remember me</Checkbox>
+              </Form.Item>
+              <Link to="/forgot-password" style={{ color: '#D4AF37' }}>
+                Forgot password?
+              </Link>
+            </div>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 45 }}>
+                Log in
+              </Button>
+            </Form.Item>
+
+            <Divider plain>Or login with</Divider>
+
+            <Button block icon={<GoogleOutlined />} style={{ marginBottom: 24 }}>
+              Google
+            </Button>
+
+            <div style={{ textAlign: 'center' }}>
+              <Text>Don't have an account? <Link to="/register" style={{ color: '#D4AF37', fontWeight: 600 }}>Sign up now</Link></Text>
+            </div>
+          </Form>
+        </Card>
       </div>
     </MainLayout>
   );
