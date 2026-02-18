@@ -47,4 +47,13 @@ Thumbs.db
 
 ### Application Specific ###
 application-local.properties
-application-prod.properties
+
+### Environment Variables ###
+.env
+.env.local
+.env.production
+.env.*.local
+
+### Uploads ###
+uploads/
+!uploads/.gitkeep

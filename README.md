@@ -404,7 +404,68 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-## 📞 Support
+## � Deployment
+
+This project is ready for production deployment!
+
+### Quick Deploy
+
+Deploy your app to the cloud in 30-45 minutes:
+
+**Frontend** → Vercel (Free tier available)  
+**Backend** → Render (Free tier available)  
+**Database** → Railway/PlanetScale (Free tier available)
+
+### Deployment Guides
+
+1. **[📘 Complete Deployment Guide](DEPLOYMENT_GUIDE.md)** - Step-by-step instructions
+2. **[⚡ Quick Deploy Reference](QUICK_DEPLOY.md)** - Quick reference card
+3. **[✅ Deployment Checklist](DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification
+4. **[🏗️ Architecture Diagram](ARCHITECTURE.md)** - System architecture overview
+
+### Platform-Specific Guides
+
+- **Frontend (Vercel)**: [VERCEL_DEPLOYMENT.md](frontend/VERCEL_DEPLOYMENT.md)
+- **Backend (Render)**: [RENDER_DEPLOYMENT.md](backend/RENDER_DEPLOYMENT.md)
+
+### What's Configured
+
+✅ **CORS** - Environment-based configuration  
+✅ **Environment Variables** - Production templates ready  
+✅ **Build Scripts** - Configured for Render & Vercel  
+✅ **Health Checks** - `/api/health` endpoint  
+✅ **Security Headers** - CSP, XSS protection  
+✅ **Database** - Production-ready connection settings  
+✅ **SSL/HTTPS** - Enforced in production  
+
+### Deployment Features
+
+- 🔄 **Auto-deploy** on git push
+- 🌿 **Preview deployments** for pull requests
+- 📊 **Built-in monitoring** and logs
+- 🔐 **Secure secrets** management
+- ⚡ **Global CDN** for frontend
+- 📈 **Scalable** infrastructure
+
+### Environment Setup
+
+```bash
+# Backend (.env)
+DATABASE_URL=jdbc:mysql://host:3306/jewelry_ecommerce
+JWT_SECRET=<generate-secure-secret>
+RAZORPAY_KEY_ID=your_key_id
+CORS_ALLOWED_ORIGINS=https://your-app.vercel.app
+
+# Frontend (.env.production)
+VITE_API_URL=https://your-backend.onrender.com/api
+VITE_RAZORPAY_KEY_ID=your_razorpay_key
+```
+
+**Start here**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+
+---
+
+## �📞 Support
 
 ### Get Help
 1. Check documentation files
