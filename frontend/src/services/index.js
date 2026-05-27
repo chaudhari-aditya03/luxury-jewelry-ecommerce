@@ -14,6 +14,12 @@ export const authService = {
 
   getCurrentUser: () =>
     apiClient.get('/auth/me'),
+
+  forgotPassword: (email) =>
+    apiClient.post('/auth/forgot-password', { email }),
+
+  resetPassword: (token, newPassword) =>
+    apiClient.post('/auth/reset-password', { token, newPassword }),
 };
 
 export const productService = {
@@ -69,11 +75,11 @@ export const orderService = {
   cancelOrder: (id, reason) =>
     apiClient.put(`/orders/cancel/${id}`, { reason }),
 
-  createPayment: (orderId) =>
-    apiClient.post('/payment/create', { orderId }),
+  createPayment: (orderId, amount = null) =>
+    apiClient.post('/payment/create', { orderId, amount }),
 
-  verifyPayment: (paymentData) =>
-    apiClient.post('/payment/verify', paymentData),
+  confirmUpiPayment: (orderId, paymentReference) =>
+    apiClient.post('/payment/confirm-upi', { orderId, paymentReference }),
 };
 
 export const userService = {
@@ -182,6 +188,9 @@ export const adminService = {
   // Payment Management
   getAllPayments: (page = 0, size = 10) =>
     apiClient.get('/payment/admin/payments', { params: { page, size } }),
+
+  updatePaymentStatus: (orderId, status) =>
+    apiClient.put('/payment/admin/status', null, { params: { orderId, status } }),
 };
 
 export const categoryService = {

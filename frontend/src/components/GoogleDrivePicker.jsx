@@ -4,7 +4,11 @@ const FileUpload = ({ onFilesSelected, label = 'Select Images from Device', maxF
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+  const isPlaceholderApiUrl = configuredApiUrl?.includes('your-backend.onrender.com');
+  const API_URL = (!configuredApiUrl || isPlaceholderApiUrl)
+    ? (import.meta.env.DEV ? 'http://localhost:8080/api' : '')
+    : configuredApiUrl;
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -14,6 +18,12 @@ const FileUpload = ({ onFilesSelected, label = 'Select Images from Device', maxF
     const uploadedFiles = [];
 
     try {
+      if (!API_URL) {
+        alert('Backend API URL is not configured for production. Set VITE_API_URL in Vercel.');
+        setUploading(false);
+        return;
+      }
+
       // Get auth token from localStorage
       const token = localStorage.getItem('authToken');
       if (!token) {

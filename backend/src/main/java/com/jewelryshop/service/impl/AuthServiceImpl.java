@@ -1,21 +1,28 @@
 package com.jewelryshop.service.impl;
 
 import com.jewelryshop.dto.*;
+import com.jewelryshop.entity.PasswordResetToken;
 import com.jewelryshop.entity.User;
 import com.jewelryshop.exception.BadRequestException;
+import com.jewelryshop.repository.PasswordResetTokenRepository;
 import com.jewelryshop.repository.UserRepository;
 import com.jewelryshop.service.AuthService;
 import com.jewelryshop.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +34,14 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final ModelMapper modelMapper;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final JavaMailSender mailSender;
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
+    @Value("${spring.mail.username:noreply@jewelryshop.com}")
+    private String fromEmail;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -91,5 +106,69 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
         return modelMapper.map(user, UserResponse.class);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
+                .orElseThrow(() -> new BadRequestException("No account found with this email address"));
+
+        // Delete any existing tokens for this user
+        passwordResetTokenRepository.deleteByUserId(user.getId());
+
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken(token);
+        resetToken.setUser(user);
+        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1));
+        resetToken.setUsed(false);
+        passwordResetTokenRepository.save(resetToken);
+
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(user.getEmail());
+            message.setSubject("Reset Your Password - Jewelry Shop");
+            message.setText(
+                "Hi " + user.getFullName() + ",\n\n" +
+                "We received a request to reset your password.\n\n" +
+                "Click the link below to reset your password (valid for 1 hour):\n" +
+                resetLink + "\n\n" +
+                "If you did not request this, please ignore this email.\n\n" +
+                "Regards,\nJewelry Shop Team"
+            );
+            mailSender.send(message);
+            log.info("Password reset email sent to: {}", email);
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}: {}", email, e.getMessage());
+            throw new BadRequestException("Failed to send reset email. Please try again later.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BadRequestException("Invalid or expired reset token"));
+
+        if (resetToken.isUsed()) {
+            throw new BadRequestException("This reset link has already been used");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Reset token has expired. Please request a new one");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("Password reset successfully for user: {}", user.getEmail());
     }
 }

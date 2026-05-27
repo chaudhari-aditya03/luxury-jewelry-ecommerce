@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Typography, Card, Input, Select, Space, message } from 'antd';
-import { SearchOutlined, DollarOutlined } from '@ant-design/icons';
+import { SearchOutlined } from '@ant-design/icons';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatPrice, formatDate } from '../../utils/helpers';
 import { adminService } from '../../services';
@@ -35,7 +35,9 @@ const AdminPayments = () => {
         orderId: payment.orderId,
         orderNumber: payment.orderNumber,
         userId: payment.userId,
+        paymentMethod: payment.paymentMethod,
         transactionId: payment.transactionId,
+        paymentReference: payment.paymentReference,
         paymentGateway: payment.paymentGateway,
         amount: payment.amount,
         status: payment.status,
@@ -80,6 +82,16 @@ const AdminPayments = () => {
     return colors[status] || 'default';
   };
 
+  const handleUpdatePaymentStatus = async (orderId, status) => {
+    try {
+      await adminService.updatePaymentStatus(orderId, status);
+      message.success(`Payment marked as ${status}`);
+      fetchPayments(pagination.current - 1, pagination.pageSize);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to update payment status');
+    }
+  };
+
   const columns = [
     {
       title: 'Order Number',
@@ -91,7 +103,13 @@ const AdminPayments = () => {
       title: 'Transaction ID',
       dataIndex: 'transactionId',
       key: 'transactionId',
-      render: (text) => <span style={{ fontSize: 12, color: '#666' }}>{text?.substring(0, 20)}...</span>,
+      render: (text) => <span style={{ fontSize: 12, color: '#666' }}>{text || '-'}</span>,
+    },
+    {
+      title: 'Method',
+      dataIndex: 'paymentMethod',
+      key: 'paymentMethod',
+      render: (method) => <Tag color={method === 'UPI' ? 'purple' : 'gold'}>{method}</Tag>,
     },
     {
       title: 'User ID',
@@ -105,6 +123,12 @@ const AdminPayments = () => {
       render: (gateway) => (
         <Tag color="blue">{gateway}</Tag>
       ),
+    },
+    {
+      title: 'UPI Ref',
+      dataIndex: 'paymentReference',
+      key: 'paymentReference',
+      render: (reference) => <span style={{ fontSize: 12 }}>{reference || '-'}</span>,
     },
     {
       title: 'Amount',
@@ -141,6 +165,23 @@ const AdminPayments = () => {
       key: 'date',
       render: (date) => formatDate(date),
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Select
+          size="small"
+          value={record.orderPaymentStatus}
+          style={{ width: 130 }}
+          onChange={(value) => handleUpdatePaymentStatus(record.orderId, value)}
+        >
+          <Option value="PENDING">Pending</Option>
+          <Option value="PAID">Paid</Option>
+          <Option value="FAILED">Failed</Option>
+          <Option value="REFUNDED">Refunded</Option>
+        </Select>
+      ),
     },
   ];
 

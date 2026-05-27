@@ -2,6 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(198, 167, 105, 0.12), transparent 30%),
+    radial-gradient(circle at right top, rgba(183, 110, 121, 0.1), transparent 24%),
+    #f8f5f0;
+  color: #1f1f1f;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(198, 167, 105, 0.28);
+  color: #111111;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   body {
     @apply bg-ivory-100 dark:bg-gray-900 text-charcoal-600 dark:text-white transition-colors duration-250;

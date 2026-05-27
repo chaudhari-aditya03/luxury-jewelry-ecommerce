@@ -9,6 +9,7 @@ import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.*;
 import com.jewelryshop.service.CouponService;
 import com.jewelryshop.service.OrderService;
+import com.jewelryshop.service.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final CouponService couponService;
     private final ObjectMapper objectMapper;
+    private final ActivityLogService activityLogService;
 
     @Override
     @Transactional
@@ -130,6 +132,10 @@ public class OrderServiceImpl implements OrderService {
         cart.getItems().clear();
         cartRepository.save(cart);
 
+        activityLogService.logActivity(userId, "PURCHASE",
+                "Placed order " + savedOrder.getOrderNumber() + " with total amount: ₹" + finalAmount,
+                "ORDER", savedOrder.getId(), "SUCCESS", null);
+
         log.info("Order placed successfully: {}", savedOrder.getOrderNumber());
         return mapToOrderResponse(savedOrder);
     }
@@ -186,6 +192,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long orderId) {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
@@ -194,18 +201,20 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrderResponse> getUserOrders(Long userId) {
         log.info("Fetching orders for user: {}", userId);
-        List<Order> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<Order> orders = orderRepository.findByUserIdWithDetailsOrderByCreatedAtDesc(userId);
         return orders.stream()
                 .map(this::mapToOrderResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
         log.info("Fetching all orders with pagination");
-        Page<Order> orders = orderRepository.findAll(pageable);
+        Page<Order> orders = orderRepository.findAllWithDetails(pageable);
         return orders.map(this::mapToOrderResponse);
     }
 

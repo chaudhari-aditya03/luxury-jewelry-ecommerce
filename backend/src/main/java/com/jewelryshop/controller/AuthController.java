@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -49,5 +51,31 @@ public class AuthController {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         UserResponse userResponse = authService.getCurrentUser(userDetails.getEmail());
         return ResponseEntity.ok(ApiResponse.success(userResponse));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Send password reset email")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email is required"));
+        }
+        authService.forgotPassword(email);
+        return ResponseEntity.ok(ApiResponse.success("Password reset email sent successfully", null));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password using token")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        String newPassword = body.get("newPassword");
+        if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Token and new password are required"));
+        }
+        if (newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Password must be at least 6 characters"));
+        }
+        authService.resetPassword(token, newPassword);
+        return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null));
     }
 }

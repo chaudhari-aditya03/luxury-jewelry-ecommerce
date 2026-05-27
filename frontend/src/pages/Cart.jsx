@@ -8,19 +8,25 @@ import { DeleteOutlined, ShoppingCartOutlined, ArrowRightOutlined } from '@ant-d
 import MainLayout from '../layouts/MainLayout';
 import { formatPrice, getImageUrl } from '../utils/helpers';
 import { cartService } from '../services';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 
 const CartPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [couponCode, setCouponCode] = useState('');
   const [totals, setTotals] = useState({ subtotal: 0, totalItems: 0 });
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     fetchCart();
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchCart = async () => {
     setIsLoading(true);

@@ -1,13 +1,9 @@
 import React from 'react';
-import { Card, Button, Rate, Tag, Typography, message } from 'antd';
-import { ShoppingCartOutlined, HeartOutlined, EyeOutlined } from '@ant-design/icons';
+import { Rate, Tag, message } from 'antd';
+import { Heart, ShoppingBag, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const { Meta } = Card;
-const { Text, Title } = Typography;
-
 const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
-  // Default values if product prop is missing or incomplete
   const {
     id = 1,
     name = 'Product Name',
@@ -19,6 +15,7 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
 
   const handleAddToCart = (e) => {
     e.preventDefault(); // Prevent Link navigation
+    e.stopPropagation();
     if (onAddToCart) {
       onAddToCart(id);
     } else {
@@ -26,58 +23,84 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
     }
   };
 
+  const handleAddToWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (onAddToWishlist) {
+      onAddToWishlist(id);
+    } else {
+      message.success('Added to wishlist');
+    }
+  };
+
   return (
-    <Link to={`/product/${id}`}>
-      <Card
-        hoverable
-        cover={
-          <div style={{ position: 'relative', overflow: 'hidden', height: 300 }}>
-            <img
-              alt={name}
-              src={image}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-              className="product-image"
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                zIndex: 1
-              }}
+    <Link to={`/product/${id}`} className="group block h-full no-underline">
+      <article className="flex h-full flex-col overflow-hidden rounded-[1.7rem] border border-[#eadfca] bg-white shadow-[0_16px_36px_rgba(17,17,17,0.08)] transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_26px_54px_rgba(17,17,17,0.14)]">
+        <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f3ede2]">
+          <img
+            alt={name}
+            src={image}
+            className="product-image h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+
+          <button
+            type="button"
+            onClick={handleAddToWishlist}
+            aria-label={`Add ${name} to wishlist`}
+            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e6d8bf] bg-white/95 text-[#1f1f1f] shadow-md transition-transform hover:scale-105"
+          >
+            <Heart className="h-4.5 w-4.5" />
+          </button>
+
+          <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3">
+            <Tag color="gold" className="m-0 rounded-full border-[#e8d6b3] bg-[#fff7e8] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#977132]">
+              {category}
+            </Tag>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              aria-label={`Quick add ${name} to cart`}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#1f1f1f] text-white shadow-lg transition-colors hover:bg-[#c6a769]"
             >
-              <Button
-                shape="circle"
-                icon={<HeartOutlined />}
-                onClick={(e) => { e.preventDefault(); onAddToWishlist && onAddToWishlist(id); }}
-                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-              />
-            </div>
+              <ShoppingBag className="h-4.5 w-4.5" />
+            </button>
           </div>
-        }
-        style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid #f0f0f0' }}
-        styles={{ body: { padding: 20 } }}
-        variant="outlined"
-        actions={[
-          <Button type="text" icon={<ShoppingCartOutlined />} onClick={handleAddToCart} block key="cart">
-            Add to Cart
-          </Button>,
-          <Button type="text" icon={<EyeOutlined />} block key="view">
-            View Details
-          </Button>
-        ]}
-      >
-        <div style={{ marginBottom: 10 }}>
-          <Tag color="gold">{category}</Tag>
         </div>
-        <Title level={5} style={{ marginBottom: 8, height: 48, overflow: 'hidden' }}>{name}</Title>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text strong style={{ fontSize: 18, color: '#D4AF37' }}>
-            ₹{price.toLocaleString('en-IN')}
-          </Text>
-          <Rate disabled defaultValue={rating} style={{ fontSize: 14 }} />
+
+        <div className="flex flex-1 flex-col gap-3 px-5 py-5">
+          <h3 className="line-clamp-2 min-h-[3.25rem] font-display text-xl font-semibold leading-tight text-[#1f1f1f]">
+            {name}
+          </h3>
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-lg font-semibold text-[#c6a769]">₹{price.toLocaleString('en-IN')}</p>
+            <Rate disabled allowHalf defaultValue={Number(rating || 0)} style={{ fontSize: 13 }} />
+          </div>
+
+          <div className="mt-auto grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#111111] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#c6a769]"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Add to Cart
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e6d8bf] bg-white px-3 py-2.5 text-sm font-semibold text-[#1f1f1f] transition-colors hover:border-[#c6a769] hover:text-[#c6a769]"
+            >
+              <Eye className="h-4 w-4" />
+              View
+            </button>
+          </div>
         </div>
-      </Card>
+      </article>
     </Link>
   );
 };

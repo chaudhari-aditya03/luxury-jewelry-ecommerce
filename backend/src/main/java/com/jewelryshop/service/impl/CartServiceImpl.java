@@ -6,6 +6,7 @@ import com.jewelryshop.exception.BadRequestException;
 import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.*;
 import com.jewelryshop.service.CartService;
+import com.jewelryshop.service.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class CartServiceImpl implements CartService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     @Override
     @Transactional
@@ -77,6 +79,10 @@ public class CartServiceImpl implements CartService {
             cartItemRepository.save(cartItem);
         }
 
+        activityLogService.logActivity(userId, "ADD_TO_CART", 
+                "Added product '" + product.getName() + "' (qty: " + request.getQuantity() + ") to cart",
+                "PRODUCT", product.getId(), "SUCCESS", null);
+
         log.info("Product added to cart successfully");
         return getCart(userId);
     }
@@ -112,6 +118,13 @@ public class CartServiceImpl implements CartService {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found for user"));
 
+        Product product = productRepository.findById(productId).orElse(null);
+        if (product != null) {
+            activityLogService.logActivity(userId, "REMOVE_FROM_CART",
+                    "Removed product '" + product.getName() + "' from cart",
+                    "PRODUCT", productId, "SUCCESS", null);
+        }
+
         cartItemRepository.deleteByCartIdAndProductId(cart.getId(), productId);
 
         log.info("Cart item removed successfully");
@@ -132,6 +145,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CartResponse getCart(Long userId) {
         Cart cart = cartRepository.findByUserIdWithItems(userId)
                 .orElseGet(() -> {

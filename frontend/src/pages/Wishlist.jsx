@@ -1,98 +1,176 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Empty, Spin, message } from 'antd';
 import MainLayout from '../layouts/MainLayout';
 import Button from '../components/common/Button';
-import { formatPrice } from '../utils/helpers';
+import { formatPrice, getImageUrl } from '../utils/helpers';
+import { cartService, userService } from '../services';
+import { useAuth } from '../context/AuthContext';
+import './Wishlist.css';
 
 const WishlistPage = () => {
-  // Dummy wishlist items
-  const wishlistItems = [
-    {
-      id: 1,
-      name: 'Diamond Ring',
-      price: 45000,
-      image: 'https://via.placeholder.com/200x200?text=Diamond+Ring',
-      inStock: true,
-    },
-    {
-      id: 2,
-      name: 'Gold Necklace',
-      price: 25000,
-      image: 'https://via.placeholder.com/200x200?text=Gold+Necklace',
-      inStock: true,
-    },
-    {
-      id: 3,
-      name: 'Pearl Earrings',
-      price: 15000,
-      image: 'https://via.placeholder.com/200x200?text=Pearl+Earrings',
-      inStock: false,
-    },
-  ];
+  const { isAuthenticated } = useAuth();
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchWishlist = async () => {
+    if (!isAuthenticated) {
+      setWishlistItems([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await userService.getWishlist();
+      const data = response.data?.data || [];
+      const mapped = data.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.productName,
+        price: Number(item.productPrice ?? 0),
+        image: getImageUrl(item.productImage),
+        inStock: Boolean(item.inStock),
+      }));
+      setWishlistItems(mapped);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to load wishlist');
+      setWishlistItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWishlist();
+  }, [isAuthenticated]);
+
+  const handleRemove = async (productId) => {
+    try {
+      await userService.removeFromWishlist(productId);
+      message.success('Removed from wishlist');
+      setWishlistItems((prev) => prev.filter((item) => item.productId !== productId));
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to remove wishlist item');
+    }
+  };
+
+  const handleAddToCart = async (item) => {
+    try {
+      await cartService.addToCart(item.productId, 1, null);
+      message.success('Added to cart');
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add to cart');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <MainLayout>
+        <section className="wishlist-page section">
+          <div className="wishlist-shell container-custom">
+            <div className="wishlist-empty-panel text-center">
+              <h1 className="wishlist-empty-title">Login to View Wishlist</h1>
+              <p className="wishlist-empty-subtitle">
+              Please sign in to access your saved products.
+              </p>
+              <Link to="/login">
+                <Button size="lg" className="wishlist-primary-btn">Go to Login</Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </MainLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <section className="wishlist-page section">
+          <div className="wishlist-shell container-custom">
+            <div className="wishlist-loading-wrap text-center">
+            <Spin size="large" />
+            </div>
+          </div>
+        </section>
+      </MainLayout>
+    );
+  }
 
   if (wishlistItems.length === 0) {
     return (
       <MainLayout>
-        <div className="section">
-          <div className="container-custom text-center">
-            <h1 className="text-4xl font-bold mb-4">Your Wishlist is Empty</h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-8">
-              Add your favorite items to your wishlist
-            </p>
-            <Link to="/shop">
-              <Button size="lg">Continue Shopping</Button>
-            </Link>
+        <section className="wishlist-page section">
+          <div className="wishlist-shell container-custom">
+            <div className="wishlist-empty-panel text-center">
+              <Empty description="Your Wishlist is Empty" />
+              <Link to="/shop">
+                <Button size="lg" className="wishlist-primary-btn">Continue Shopping</Button>
+              </Link>
+            </div>
           </div>
-        </div>
+        </section>
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      <div className="section">
-        <div className="container-custom">
-          <h1 className="text-4xl font-bold mb-8">My Wishlist</h1>
+      <section className="wishlist-page section">
+        <div className="wishlist-shell container-custom">
+          <header className="wishlist-hero">
+            <p className="wishlist-eyebrow">Curated Favorites</p>
+            <h1 className="wishlist-title">My Wishlist</h1>
+            <p className="wishlist-subtitle">Your saved jewellery pieces, ready whenever you are.</p>
+          </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="wishlist-grid">
             {wishlistItems.map((item) => (
-              <div key={item.id} className="card overflow-hidden">
-                <div className="relative aspect-square">
+              <article key={item.id} className="wishlist-card">
+                <div className="wishlist-media-wrap">
+                  <span className="wishlist-tag">{item.category || 'Saved Piece'}</span>
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-cover"
+                    className="wishlist-image"
                   />
                   {!item.inStock && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="text-white font-bold">Out of Stock</span>
+                    <div className="wishlist-stock-overlay">
+                      <span className="wishlist-stock-text">Out of Stock</span>
                     </div>
                   )}
                 </div>
-                <div className="p-6">
-                  <h3 className="font-bold text-lg mb-2">{item.name}</h3>
-                  <p className="text-rose-gold-500 font-bold mb-4">
+                <div className="wishlist-content">
+                  <h3 className="wishlist-product-name">{item.name}</h3>
+                  <p className="wishlist-price">
                     {formatPrice(item.price)}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="wishlist-actions">
                     <Button
                       variant="primary"
                       size="sm"
-                      className="flex-1"
+                      className="wishlist-add-btn"
                       disabled={!item.inStock}
+                      onClick={() => handleAddToCart(item)}
                     >
                       Add to Cart
                     </Button>
-                    <Button variant="secondary" size="sm">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="wishlist-remove-btn"
+                      onClick={() => handleRemove(item.productId)}
+                    >
                       Remove
                     </Button>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
-      </div>
+      </section>
     </MainLayout>
   );
 };

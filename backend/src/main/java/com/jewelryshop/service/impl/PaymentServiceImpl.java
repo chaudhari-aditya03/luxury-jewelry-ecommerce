@@ -1,8 +1,9 @@
 package com.jewelryshop.service.impl;
 
 import com.jewelryshop.dto.CreatePaymentRequest;
+import com.jewelryshop.dto.ConfirmUpiPaymentRequest;
+import com.jewelryshop.dto.PaymentInitiationResponse;
 import com.jewelryshop.dto.PaymentResponse;
-import com.jewelryshop.dto.VerifyPaymentRequest;
 import com.jewelryshop.entity.Order;
 import com.jewelryshop.entity.Payment;
 import com.jewelryshop.exception.BadRequestException;
@@ -10,20 +11,18 @@ import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.OrderRepository;
 import com.jewelryshop.repository.PaymentRepository;
 import com.jewelryshop.service.PaymentService;
-import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -33,82 +32,76 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
 
-    @Value("${razorpay.key.id}")
-    private String razorpayKeyId;
+    @Value("${payment.upi.id:adityachaudhari312005@oksbi}")
+    private String upiId;
 
-    @Value("${razorpay.key.secret}")
-    private String razorpayKeySecret;
+    @Value("${payment.upi.payee-name:Jewelry Shop}")
+    private String upiPayeeName;
 
     @Override
-    public JSONObject createPaymentOrder(CreatePaymentRequest request) throws Exception {
-        log.info("Creating Razorpay order for order ID: {}", request.getOrderId());
+    @Transactional
+    public PaymentInitiationResponse createPaymentOrder(CreatePaymentRequest request) {
+        log.info("Initiating payment for order ID: {}", request.getOrderId());
 
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", request.getOrderId()));
 
-        try {
-            RazorpayClient razorpay = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+        Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(order.getId())
+                .orElseGet(Payment::new);
 
-            JSONObject orderRequest = new JSONObject();
-            orderRequest.put("amount", request.getAmount().multiply(BigDecimal.valueOf(100)).intValue());
-            orderRequest.put("currency", "INR");
-            orderRequest.put("receipt", order.getOrderNumber());
-
-            com.razorpay.Order razorpayOrder = razorpay.orders.create(orderRequest);
-
-            // Save payment record
-            Payment payment = new Payment();
+        if (payment.getId() == null) {
             payment.setOrder(order);
-            payment.setPaymentGateway("Razorpay");
-            payment.setTransactionId(razorpayOrder.get("id"));
-            payment.setAmount(request.getAmount());
+            payment.setAmount(order.getFinalAmount());
             payment.setStatus(Payment.PaymentStatus.PENDING);
-            paymentRepository.save(payment);
-            log.info("Razorpay order created successfully: {}",
-                    String.valueOf(razorpayOrder.get("id")));
-            return razorpayOrder.toJson();
-
-        } catch (RazorpayException e) {
-            log.error("Error creating Razorpay order", e);
-            throw new BadRequestException("Failed to create payment order: " + e.getMessage());
         }
+
+        if (order.getPaymentMethod() == Order.PaymentMethod.COD) {
+            payment.setPaymentGateway("Cash on Delivery");
+            payment.setTransactionId(payment.getTransactionId() != null ? payment.getTransactionId() : "COD-" + order.getOrderNumber());
+            payment.setPaymentReference(null);
+            Payment savedPayment = paymentRepository.save(payment);
+            return buildCodInitiationResponse(order, savedPayment);
+        }
+
+        String transactionId = payment.getTransactionId() != null ? payment.getTransactionId() : "UPI-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
+        String upiUrl = buildUpiUrl(order.getFinalAmount(), order.getOrderNumber(), transactionId);
+
+        payment.setPaymentGateway("UPI QR");
+        payment.setTransactionId(transactionId);
+        payment.setPaymentReference(payment.getPaymentReference());
+        Payment savedPayment = paymentRepository.save(payment);
+
+        return buildUpiInitiationResponse(order, savedPayment, upiUrl);
     }
 
     @Override
     @Transactional
-    public boolean verifyPayment(VerifyPaymentRequest request) throws Exception {
-        log.info("Verifying Razorpay payment");
+    public PaymentResponse confirmUpiPayment(ConfirmUpiPaymentRequest request) {
+        log.info("Confirming UPI payment for order: {}", request.getOrderId());
 
-        String generatedSignature = generateSignature(
-                request.getRazorpayOrderId(),
-                request.getRazorpayPaymentId(),
-                razorpayKeySecret
-        );
+        Order order = orderRepository.findById(request.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", request.getOrderId()));
 
-        boolean isValid = generatedSignature.equals(request.getRazorpaySignature());
-
-        if (isValid) {
-            Payment payment = paymentRepository.findByTransactionId(request.getRazorpayOrderId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
-
-            payment.setStatus(Payment.PaymentStatus.SUCCESS);
-            paymentRepository.save(payment);
-
-            Order order = payment.getOrder();
-            order.setPaymentStatus(Order.PaymentStatus.PAID);
-            orderRepository.save(order);
-
-            log.info("Payment verified and updated successfully");
-        } else {
-            log.error("Payment verification failed - invalid signature");
+        if (order.getPaymentMethod() != Order.PaymentMethod.UPI) {
+            throw new BadRequestException("This order is not a UPI order");
         }
 
-        return isValid;
+        Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(order.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+
+        payment.setPaymentReference(request.getPaymentReference().trim());
+        payment.setStatus(Payment.PaymentStatus.SUCCESS);
+        paymentRepository.save(payment);
+
+        order.setPaymentStatus(Order.PaymentStatus.PAID);
+        orderRepository.save(order);
+
+        return mapToPaymentResponse(payment);
     }
 
     @Override
     @Transactional
-    public void updatePaymentStatus(Long orderId, String status) {
+    public PaymentResponse updatePaymentStatus(Long orderId, String status) {
         log.info("Updating payment status for order: {}", orderId);
 
         Order order = orderRepository.findById(orderId)
@@ -121,16 +114,24 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("Invalid payment status: " + status);
         }
 
+        Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+
         order.setPaymentStatus(paymentStatus);
         orderRepository.save(order);
 
+        payment.setStatus(mapPaymentStatus(paymentStatus));
+        paymentRepository.save(payment);
+
         log.info("Payment status updated successfully");
+        return mapToPaymentResponse(payment);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PaymentResponse> getAllPayments(Pageable pageable) {
         log.info("Fetching all payments with pagination");
-        Page<Payment> payments = paymentRepository.findAll(pageable);
+        Page<Payment> payments = paymentRepository.findAllWithOrderDetails(pageable);
         return payments.map(this::mapToPaymentResponse);
     }
 
@@ -140,8 +141,10 @@ public class PaymentServiceImpl implements PaymentService {
         response.setOrderId(payment.getOrder().getId());
         response.setOrderNumber(payment.getOrder().getOrderNumber());
         response.setUserId(payment.getOrder().getUser().getId());
+        response.setPaymentMethod(payment.getOrder().getPaymentMethod());
         response.setPaymentGateway(payment.getPaymentGateway());
         response.setTransactionId(payment.getTransactionId());
+        response.setPaymentReference(payment.getPaymentReference());
         response.setAmount(payment.getAmount());
         response.setStatus(Payment.PaymentStatus.valueOf(payment.getStatus().name()));
         response.setOrderPaymentStatus(Order.PaymentStatus.valueOf(payment.getOrder().getPaymentStatus().name()));
@@ -149,20 +152,54 @@ public class PaymentServiceImpl implements PaymentService {
         return response;
     }
 
-    private String generateSignature(String orderId, String paymentId, String secret) throws Exception {
-        String payload = orderId + "|" + paymentId;
-        Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-        SecretKeySpec secret_key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
-        sha256_HMAC.init(secret_key);
+    private PaymentInitiationResponse buildCodInitiationResponse(Order order, Payment payment) {
+        PaymentInitiationResponse response = new PaymentInitiationResponse();
+        response.setOrderId(order.getId());
+        response.setOrderNumber(order.getOrderNumber());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setPaymentGateway(payment.getPaymentGateway());
+        response.setAmount(order.getFinalAmount());
+        response.setTransactionId(payment.getTransactionId());
+        response.setStatus(payment.getStatus());
+        response.setInstructions("Cash on Delivery selected. Collect payment when the order is delivered.");
+        return response;
+    }
 
-        byte[] hash = sha256_HMAC.doFinal(payload.getBytes());
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) hexString.append('0');
-            hexString.append(hex);
-        }
+    private PaymentInitiationResponse buildUpiInitiationResponse(Order order, Payment payment, String upiUrl) {
+        PaymentInitiationResponse response = new PaymentInitiationResponse();
+        response.setOrderId(order.getId());
+        response.setOrderNumber(order.getOrderNumber());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setPaymentGateway(payment.getPaymentGateway());
+        response.setAmount(order.getFinalAmount());
+        response.setTransactionId(payment.getTransactionId());
+        response.setStatus(payment.getStatus());
+        response.setUpiId(upiId);
+        response.setPayeeName(upiPayeeName);
+        response.setUpiUrl(upiUrl);
+        response.setQrCodeUrl("https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + URLEncoder.encode(upiUrl, StandardCharsets.UTF_8));
+        response.setInstructions("Scan the QR or open the UPI app, pay the exact amount, then enter the UPI reference number to confirm payment.");
+        return response;
+    }
 
-        return hexString.toString();
+    private String buildUpiUrl(BigDecimal amount, String orderNumber, String transactionId) {
+        return "upi://pay?pa=" + encode(upiId)
+                + "&pn=" + encode(upiPayeeName)
+                + "&am=" + encode(amount.toPlainString())
+                + "&cu=INR"
+                + "&tn=" + encode("Order " + orderNumber)
+                + "&tr=" + encode(transactionId);
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private Payment.PaymentStatus mapPaymentStatus(Order.PaymentStatus paymentStatus) {
+        return switch (paymentStatus) {
+            case PAID -> Payment.PaymentStatus.SUCCESS;
+            case FAILED, REFUNDED -> Payment.PaymentStatus.FAILED;
+            case PENDING -> Payment.PaymentStatus.PENDING;
+        };
     }
 }

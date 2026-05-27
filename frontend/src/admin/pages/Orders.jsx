@@ -37,6 +37,7 @@ const AdminOrders = () => {
         date: order.createdAt,
         total: Number(order.finalAmount ?? order.totalAmount ?? 0),
         status: order.orderStatus,
+        paymentStatus: order.paymentStatus,
         items: order.orderItems || [],
         address: order.addressSnapshot,
       })));
@@ -115,8 +116,8 @@ const AdminOrders = () => {
             <Tag
               color={
                 status === 'DELIVERED' ? 'success' :
-                  status === 'PROCESSING' ? 'processing' :
-                    status === 'CANCELLED' ? 'error' : 'default'
+                  status === 'PROCESSING' || status === 'SHIPPED' || status === 'PLACED' ? 'processing' :
+                    status === 'CANCELLED' || status === 'RETURNED' ? 'error' : 'default'
               }
               style={{ cursor: 'pointer' }}
             >
@@ -131,6 +132,18 @@ const AdminOrders = () => {
         { text: 'Cancelled', value: 'CANCELLED' },
       ],
       onFilter: (value, record) => record.status === value,
+    },
+    {
+      title: 'Payment',
+      dataIndex: 'paymentStatus',
+      key: 'paymentStatus',
+      render: (status) => {
+        let color = 'default';
+        if (status === 'PAID') color = 'success';
+        if (status === 'PENDING') color = 'warning';
+        if (status === 'FAILED' || status === 'REFUNDED') color = 'error';
+        return <Tag color={color}>{status || 'PENDING'}</Tag>;
+      }
     },
     {
       title: 'Action',

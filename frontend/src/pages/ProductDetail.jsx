@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Row, Col, Typography, Button, Rate, Tag, Divider,
   InputNumber, Radio, Tabs, Image, Spin, Breadcrumb, message, Alert
@@ -9,13 +9,16 @@ import {
   SafetyCertificateOutlined, CarOutlined
 } from '@ant-design/icons';
 import MainLayout from '../layouts/MainLayout';
-import { productService, cartService } from '../services';
+import { productService, cartService, userService } from '../services';
 import { getImageUrl } from '../utils/helpers';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 
 const ProductDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -89,6 +92,24 @@ const ProductDetailPage = () => {
       message.success(`Added ${quantity} ${product.name} to cart`);
     } catch (error) {
       message.error(error.response?.data?.message || 'Failed to add to cart');
+    }
+  };
+
+  const handleAddToWishlist = async () => {
+    if (!product) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await userService.addToWishlist(product.id);
+      message.success('Added to wishlist');
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add to wishlist');
     }
   };
 
@@ -243,7 +264,7 @@ const ProductDetailPage = () => {
               >
                 Add to Cart
               </Button>
-              <Button size="large" icon={<HeartOutlined />} style={{ width: 50 }} />
+              <Button size="large" icon={<HeartOutlined />} style={{ width: 50 }} onClick={handleAddToWishlist} />
             </div>
 
             <div style={{ background: '#f9f9f9', padding: 20, borderRadius: 8 }}>

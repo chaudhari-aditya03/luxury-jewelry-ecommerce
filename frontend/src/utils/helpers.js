@@ -63,7 +63,13 @@ export const getImageUrl = (imageUrl) => {
   }
   
   // Get backend base URL
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+  const isPlaceholderApiUrl = configuredApiUrl?.includes('your-backend.onrender.com');
+  const API_BASE = (!configuredApiUrl || isPlaceholderApiUrl)
+    ? (import.meta.env.DEV ? 'http://localhost:8080/api' : '')
+    : configuredApiUrl;
+
+  if (!API_BASE) return 'https://via.placeholder.com/300';
   const BASE_URL = API_BASE.replace('/api', '');
   
   // Handle both cases:

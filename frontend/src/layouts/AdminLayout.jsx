@@ -17,6 +17,12 @@ const AdminLayout = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  const getBreadcrumbTitle = () => {
+    const segment = location.pathname.split('/').filter(Boolean).pop();
+    if (!segment || segment === 'admin') return 'dashboard';
+    return segment;
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -43,9 +49,24 @@ const AdminLayout = ({ children }) => {
       icon: <LogoutOutlined />,
       label: 'Logout',
       danger: true,
-      onClick: handleLogout,
     },
   ];
+
+  const handleUserMenuClick = ({ key }) => {
+    if (key === 'logout') {
+      handleLogout();
+      return;
+    }
+
+    if (key === 'profile') {
+      navigate('/admin/profile');
+      return;
+    }
+
+    if (key === 'settings') {
+      navigate('/admin/settings');
+    }
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -69,16 +90,16 @@ const AdminLayout = ({ children }) => {
               onClick: () => setCollapsed(!collapsed),
               style: { fontSize: 18, marginRight: 24, cursor: 'pointer' }
             })}
-            <Breadcrumb items={[{ title: 'Admin' }, { title: location.pathname.split('/').pop() }]} />
+            <Breadcrumb items={[{ title: 'Admin' }, { title: getBreadcrumbTitle() }]} />
           </div>
 
           <Space size="large">
             <Button type="text" icon={<BellOutlined style={{ fontSize: 18 }} />} />
-            <Dropdown menu={{ items: userMenuItems }}>
+            <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }}>
               <span>
                 <Space style={{ cursor: 'pointer' }}>
                   <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>A</Avatar>
-                  <span>{user?.firstName || 'Admin'}</span>
+                  <span>{user?.fullName || user?.firstName || 'Admin'}</span>
                 </Space>
               </span>
             </Dropdown>

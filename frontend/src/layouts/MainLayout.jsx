@@ -1,29 +1,18 @@
 import React from 'react';
-import { Layout } from 'antd';
-import Navbar from '../components/common/Navbar';
-import Footer from '../components/common/Footer';
-
-const { Content } = Layout;
+import LuxuryNavbar from '../components/landing/LuxuryNavbar';
+import LuxuryFooter from '../components/landing/LuxuryFooter';
 
 const MainLayout = ({ children }) => {
   return (
-    <Layout className="min-h-screen">
-      <Navbar />
-      <Content
-        className="site-layout"
-        style={{
-          marginTop: 64,
-          padding: '24px',
-          minHeight: 'calc(100vh - 64px - 300px)', // Approx adjustment
-          background: '#f5f5f5' // Light gray background for content area
-        }}
-      >
-        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+    <div className="min-h-screen bg-background text-text">
+      <LuxuryNavbar />
+      <main className="px-4 pb-10 pt-24 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl">
           {children}
         </div>
-      </Content>
-      <Footer />
-    </Layout>
+      </main>
+      <LuxuryFooter />
+    </div>
   );
 };
 

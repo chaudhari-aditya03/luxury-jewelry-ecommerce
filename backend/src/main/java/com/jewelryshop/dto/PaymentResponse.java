@@ -17,8 +17,10 @@ public class PaymentResponse {
     private Long orderId;
     private String orderNumber;
     private Long userId;
+    private Order.PaymentMethod paymentMethod;
     private String paymentGateway;
     private String transactionId;
+    private String paymentReference;
     private BigDecimal amount;
     private Payment.PaymentStatus status;
     private Order.PaymentStatus orderPaymentStatus;

@@ -32,6 +32,9 @@ public class Payment {
     @Column(name = "transaction_id", length = 200)
     private String transactionId;
 
+    @Column(name = "payment_reference", length = 200)
+    private String paymentReference;
+
     @Column(precision = 10, scale = 2, nullable = false)
     private BigDecimal amount;
 

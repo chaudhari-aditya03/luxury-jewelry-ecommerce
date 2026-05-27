@@ -2,24 +2,23 @@ import React, { useState, useEffect } from 'react';
 import {
   Layout, Row, Col, Card, Typography, Input, Select, Slider,
   Checkbox, Radio, Button, Pagination, Empty, Spin, Breadcrumb,
-  Collapse, theme, Drawer, Space
+  Drawer, Space, message
 } from 'antd';
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import ProductCard from '../components/product/ProductCard';
-import { productService, cartService } from '../services';
+import { productService, cartService, userService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../utils/helpers';
+import './Shop.css';
 
 const { Title, Text } = Typography;
 const { Sider, Content } = Layout;
-const { Panel } = Collapse;
 const { Search } = Input;
 const { Option } = Select;
 
 const ShopPage = () => {
-  const { token } = theme.useToken();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [filters, setFilters] = useState({
@@ -105,45 +104,61 @@ const ShopPage = () => {
 
     try {
       await cartService.addToCart(productId, 1, null);
+      message.success('Added to cart');
     } catch (error) {
-      console.error('Failed to add to cart:', error);
+      message.error(error.response?.data?.message || 'Failed to add to cart');
+    }
+  };
+
+  const handleAddToWishlist = async (productId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await userService.addToWishlist(productId);
+      message.success('Added to wishlist');
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add to wishlist');
     }
   };
 
   const FilterContent = () => (
-    <div style={{ padding: '0 10px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={5}>Categories</Title>
+    <div className="shop-filter-content">
+      <div className="shop-filter-section">
+        <Title level={5} className="shop-filter-title">Categories</Title>
         <Checkbox.Group
           options={categories}
           value={filters.category}
           onChange={v => handleFilterChange('category', v)}
-          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          className="shop-checkbox-group"
         />
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <Title level={5}>Price Range</Title>
+      <div className="shop-filter-section">
+        <Title level={5} className="shop-filter-title">Price Range</Title>
         <Slider
           range
           min={0}
           max={100000}
           step={1000}
-          defaultValue={[0, 100000]}
+          value={filters.priceRange}
           onAfterChange={v => handleFilterChange('priceRange', v)}
+          className="shop-price-slider"
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div className="shop-filter-range-labels">
           <Text type="secondary">₹0</Text>
           <Text type="secondary">₹1,00,000+</Text>
         </div>
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <Title level={5}>Rating</Title>
+      <div className="shop-filter-section">
+        <Title level={5} className="shop-filter-title">Rating</Title>
         <Radio.Group
           onChange={e => handleFilterChange('rating', e.target.value)}
           value={filters.rating}
-          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          className="shop-radio-group"
         >
           <Radio value={4}>4 Stars & Up</Radio>
           <Radio value={3}>3 Stars & Up</Radio>
@@ -154,6 +169,7 @@ const ShopPage = () => {
 
       <Button
         block
+        className="shop-clear-btn"
         onClick={() => setFilters({ search: '', category: [], priceRange: [0, 1000000], rating: 0, sortBy: 'newest' })}
       >
         Clear Filters
@@ -163,87 +179,112 @@ const ShopPage = () => {
 
   return (
     <MainLayout>
-      <div style={{ paddingBottom: 20 }}>
-        <Breadcrumb items={[{ title: 'Home', href: '/' }, { title: 'Shop' }]} style={{ marginBottom: 20 }} />
+      <section className="shop-page">
+        <div className="shop-shell">
+          <Breadcrumb items={[{ title: 'Home', href: '/' }, { title: 'Shop' }]} className="shop-breadcrumb" />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Title level={2} style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Shop Collection</Title>
-          <Button
-            icon={<FilterOutlined />}
-            className="md:hidden"
-            onClick={() => setMobileFilterVisible(true)}
-          >
-            Filters
-          </Button>
-        </div>
+          <div className="shop-hero">
+            <div className="shop-hero-content">
+              <p className="shop-hero-eyebrow">Curated Collection</p>
+              <Title level={2} className="shop-hero-title">Shop Collection</Title>
+              <p className="shop-hero-subtitle">
+                Discover handcrafted jewellery designed for elegance and timeless beauty.
+              </p>
+            </div>
+            <div className="shop-hero-actions">
+              <Search
+                allowClear
+                enterButton={<SearchOutlined />}
+                placeholder="Search rings, necklaces, earrings..."
+                className="shop-search"
+                onSearch={(value) => handleFilterChange('search', value.trim())}
+              />
+              <Button
+                icon={<FilterOutlined />}
+                className="shop-mobile-filter-btn md:hidden"
+                onClick={() => setMobileFilterVisible(true)}
+              >
+                Filters
+              </Button>
+            </div>
+          </div>
 
-        <Layout style={{ background: '#fff' }}>
-          {/* Desktop Sidebar */}
-          <Sider width={280} theme="light" style={{ background: '#fff', paddingRight: 24 }} className="hidden md:block">
-            <FilterContent />
-          </Sider>
-
-          <Content style={{ background: '#fff' }}>
-            {/* Toolbar */}
-            <Card styles={{ body: { padding: '12px 24px' } }} style={{ marginBottom: 24, borderRadius: 8 }}>
-              <Row justify="space-between" align="middle" gutter={[16, 16]}>
-                <Col xs={24} sm={12}>
-                  <Text>{totalItems} Products Found</Text>
-                </Col>
-                <Col xs={24} sm={12} style={{ textAlign: 'right' }}>
-                  <Space>
-                    <Text>Sort By:</Text>
-                    <Select
-                      defaultValue="newest"
-                      style={{ width: 150 }}
-                      onChange={v => handleFilterChange('sortBy', v)}
-                    >
-                      <Option value="newest">Newest Arrivals</Option>
-                      <Option value="price-asc">Price: Low to High</Option>
-                      <Option value="price-desc">Price: High to Low</Option>
-                      <Option value="rating">Top Rated</Option>
-                    </Select>
-                  </Space>
-                </Col>
-              </Row>
-            </Card>
-
-            {/* Products */}
-            {isLoading ? (
-              <div style={{ textAlign: 'center', padding: 50 }}>
-                <Spin size="large" />
-              </div>
-            ) : products.length > 0 ? (
-              <>
-                <Row gutter={[24, 24]}>
-                  {products.map(product => (
-                    <Col xs={24} sm={12} lg={8} key={product.id}>
-                      <ProductCard product={product} onAddToCart={handleAddToCart} />
-                    </Col>
-                  ))}
-                </Row>
-                <div style={{ marginTop: 40, textAlign: 'center' }}>
-                  <Pagination
-                    current={currentPage}
-                    total={totalItems}
-                    pageSize={pageSize}
-                    onChange={p => setCurrentPage(p)}
-                    showSizeChanger={false}
-                  />
+          <Layout className="shop-layout">
+            <Sider width={300} theme="light" className="shop-sider hidden md:block">
+              <div className="shop-sidebar-sticky">
+                <div className="shop-filter-card">
+                  <FilterContent />
                 </div>
-              </>
-            ) : (
-              <Empty description="No products found" />
-            )}
-          </Content>
-        </Layout>
-      </div>
+              </div>
+            </Sider>
+
+            <Content className="shop-content">
+              <Card className="shop-toolbar" styles={{ body: { padding: '14px 20px' } }}>
+                <Row justify="space-between" align="middle" gutter={[16, 16]}>
+                  <Col xs={24} sm={12}>
+                    <Text className="shop-product-count">{totalItems} Products Found</Text>
+                  </Col>
+                  <Col xs={24} sm={12} className="shop-sort-col">
+                    <Space>
+                      <Text className="shop-sort-label">Sort By:</Text>
+                      <Select
+                        value={filters.sortBy}
+                        className="shop-sort-select"
+                        onChange={v => handleFilterChange('sortBy', v)}
+                      >
+                        <Option value="newest">Newest Arrivals</Option>
+                        <Option value="price-asc">Price: Low to High</Option>
+                        <Option value="price-desc">Price: High to Low</Option>
+                        <Option value="rating">Top Rated</Option>
+                      </Select>
+                    </Space>
+                  </Col>
+                </Row>
+              </Card>
+
+              {isLoading ? (
+                <div className="shop-loading-wrap">
+                  <Spin size="large" />
+                </div>
+              ) : products.length > 0 ? (
+                <>
+                  <Row gutter={[24, 24]} className="shop-products-grid">
+                    {products.map(product => (
+                      <Col xs={24} sm={12} lg={8} key={product.id} className="shop-product-col">
+                        <ProductCard
+                          product={product}
+                          onAddToCart={handleAddToCart}
+                          onAddToWishlist={handleAddToWishlist}
+                        />
+                      </Col>
+                    ))}
+                  </Row>
+                  <div className="shop-pagination-wrap">
+                    <Pagination
+                      current={currentPage}
+                      total={totalItems}
+                      pageSize={pageSize}
+                      onChange={p => setCurrentPage(p)}
+                      showSizeChanger={false}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="shop-empty-wrap">
+                  <Empty description="No products found" />
+                </div>
+              )}
+            </Content>
+          </Layout>
+        </div>
+      </section>
 
       <Drawer
         title="Filters"
         placement="left"
         onClose={() => setMobileFilterVisible(false)}
         open={mobileFilterVisible}
+        className="shop-mobile-filter-drawer"
       >
         <FilterContent />
       </Drawer>

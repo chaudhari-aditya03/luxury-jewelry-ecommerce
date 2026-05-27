@@ -2,6 +2,24 @@
 
 A full-stack, production-ready e-commerce platform for jewelry products built with **Spring Boot** (Backend) and **React + Vite** (Frontend).
 
+**🌐 Live Demo**: [https://jewelryeshop.vercel.app](https://jewelryeshop.vercel.app)
+
+---
+
+## 🌍 Deployment Status
+
+| Component | Status | URL |
+|-----------|--------|-----|
+| **Frontend** | ✅ Deployed | [jewelryeshop.vercel.app](https://jewelryeshop.vercel.app) |
+| **Backend** | ✅ Deployed | Render (Docker) |
+| **Database** | ⏳ **Next Step** | Setup on Railway |
+
+> **🎯 Next Step**: Set up cloud database on Railway and connect to backend
+> 
+> **📘 Guide**: [DATABASE_SETUP.md](DATABASE_SETUP.md) - Complete database setup (10-15 min)
+> 
+> **⚡ Quick Reference**: [DATABASE_CONNECTION.md](DATABASE_CONNECTION.md) - Where to add database URLs
+
 ---
 
 ## 🚀 Quick Start
@@ -180,6 +198,12 @@ E-Commerce_Website/
 ## 🌐 API Endpoints
 
 ### Base URLs
+
+**Production:**
+- Frontend: `https://jewelryeshop.vercel.app`
+- Backend: `Deploy to Render first` (See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md))
+
+**Local Development:**
 - Backend API: `http://localhost:8080/api`
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Frontend: `http://localhost:5173`
@@ -404,7 +428,17 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-## � Deployment
+## 🚀 Deployment
+
+### Current Status
+
+✅ **Frontend**: Deployed on Vercel → [https://jewelryeshop.vercel.app](https://jewelryeshop.vercel.app)  
+⏳ **Backend**: Ready to deploy (Currently local)  
+⏳ **Database**: Needs setup (Railway/PlanetScale)
+
+> **Next Step**: Deploy backend to Render to connect with the live frontend. Follow [RENDER_DEPLOYMENT.md](backend/RENDER_DEPLOYMENT.md)
+
+---
 
 This project is ready for production deployment!
 
@@ -412,8 +446,8 @@ This project is ready for production deployment!
 
 Deploy your app to the cloud in 30-45 minutes:
 
-**Frontend** → Vercel (Free tier available)  
-**Backend** → Render (Free tier available)  
+**Frontend** → Vercel ✅ *Already deployed*  
+**Backend** → Render ⏳ *Deploy next* (Free tier available)  
 **Database** → Railway/PlanetScale (Free tier available)
 
 ### Deployment Guides
@@ -425,8 +459,8 @@ Deploy your app to the cloud in 30-45 minutes:
 
 ### Platform-Specific Guides
 
-- **Frontend (Vercel)**: [VERCEL_DEPLOYMENT.md](frontend/VERCEL_DEPLOYMENT.md)
-- **Backend (Render)**: [RENDER_DEPLOYMENT.md](backend/RENDER_DEPLOYMENT.md)
+- **Frontend (Vercel)**: [VERCEL_DEPLOYMENT.md](frontend/VERCEL_DEPLOYMENT.md) ✅ *Deployed*
+- **Backend (Render)**: [RENDER_DEPLOYMENT.md](backend/RENDER_DEPLOYMENT.md) ⏳ *Next step*
 
 ### What's Configured
 
@@ -449,17 +483,27 @@ Deploy your app to the cloud in 30-45 minutes:
 
 ### Environment Setup
 
+**Backend (Render) - Required:**
 ```bash
-# Backend (.env)
 DATABASE_URL=jdbc:mysql://host:3306/jewelry_ecommerce
+DATABASE_USERNAME=your_db_username
+DATABASE_PASSWORD=your_db_password
 JWT_SECRET=<generate-secure-secret>
 RAZORPAY_KEY_ID=your_key_id
-CORS_ALLOWED_ORIGINS=https://your-app.vercel.app
-
-# Frontend (.env.production)
-VITE_API_URL=https://your-backend.onrender.com/api
-VITE_RAZORPAY_KEY_ID=your_razorpay_key
+RAZORPAY_KEY_SECRET=your_secret
+CORS_ALLOWED_ORIGINS=https://jewelryeshop.vercel.app
+SERVER_PORT=8080
+SPRING_PROFILES_ACTIVE=prod
 ```
+
+**Frontend (Vercel) - Already Configured:**
+```bash
+VITE_API_URL=https://your-backend.onrender.com/api  # Update after deploying backend
+VITE_RAZORPAY_KEY_ID=your_razorpay_key
+VITE_APP_NAME=Jewelry Store
+```
+
+> **Important**: After deploying backend, update `VITE_API_URL` in Vercel with your actual backend URL
 
 **Start here**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
@@ -487,22 +531,34 @@ VITE_RAZORPAY_KEY_ID=your_razorpay_key
 | Component | Status | Version |
 |-----------|--------|---------|
 | Backend API | ✅ Complete | 1.0.0 |
-| Frontend UI | ✅ Complete | 1.0.0 |
+| Component | Status | Version |
+|-----------|--------|---------|
+| Backend API | ✅ Complete | 1.0.0 |
+| Frontend UI | ✅ Deployed | 1.0.0 |
 | Authentication | ✅ Working | JWT |
-| Database | ✅ Configured | MySQL 8.0 |
+| Database | ⏳ Pending Deploy | MySQL 8.0 |
 | Admin Panel | ✅ Complete | Full featured |
 | Documentation | ✅ Complete | Comprehensive |
 | Integration | ✅ Complete | Fully connected |
+| **Production URL** | ✅ Live | [jewelryeshop.vercel.app](https://jewelryeshop.vercel.app) |
 
 ---
 
-## 🎉 Getting Started Now
+## 🎉 Getting Started
+
+### Access the Live Site
+
+**Production**: [https://jewelryeshop.vercel.app](https://jewelryeshop.vercel.app)
+
+> **Note**: Backend is not yet deployed, so some features won't work. Deploy backend to Render to enable full functionality.
+
+### Local Development
 
 ```powershell
 # 1. Clone/Navigate to project
 cd E-Commerce_Website
 
-# 2. Start everything
+# 2. Start everything locally
 .\start-all.ps1
 
 # 3. Access the application
@@ -516,6 +572,42 @@ UPDATE users SET role = 'ADMIN' WHERE email = 'your@email.com';
 
 # 5. Start developing! 🚀
 ```
+
+---
+
+## 🚀 Complete the Deployment
+
+**Frontend is live, but backend needs deployment for full functionality:**
+
+### Step 1: Deploy Backend to Render
+Follow the detailed guide: [backend/RENDER_DEPLOYMENT.md](backend/RENDER_DEPLOYMENT.md)
+
+**Quick Setup:**
+1. Create Render account
+2. Connect GitHub repo
+3. Configure build settings
+4. Add environment variables (see deployment guide)
+5. Deploy (takes ~10-15 min)
+
+### Step 2: Set Up Database
+- Use Railway or PlanetScale (free tier available)
+- Create MySQL database
+- Get connection string
+- Add to Render environment variables
+
+### Step 3: Update Frontend
+- In Vercel dashboard
+- Update `VITE_API_URL` with your Render backend URL
+- Redeploy frontend
+
+### Step 4: Test Everything
+- Visit https://jewelryeshop.vercel.app
+- Test login, products, cart functionality
+- Check admin panel
+
+**Estimated time**: 30-45 minutes
+
+**Full Guide**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ---
 

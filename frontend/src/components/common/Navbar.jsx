@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Button, Badge, Drawer, Dropdown, Avatar, Input, Space, theme } from 'antd';
 import {
   ShoppingCartOutlined,
@@ -7,34 +7,68 @@ import {
   SearchOutlined,
   HeartOutlined,
   LogoutOutlined,
-  ShoppingOutlined
+  ShoppingOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { cartService } from '../../services';
 
 const { Header } = Layout;
 const { Search } = Input;
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+  const selectedMenuKey = location.pathname.startsWith('/admin') ? '/admin' : location.pathname;
 
   const handleLogout = () => {
     logout();
+    setCartCount(0);
     navigate('/');
   };
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      if (!isAuthenticated) {
+        setCartCount(0);
+        return;
+      }
+
+      try {
+        const response = await cartService.getCart();
+        const cart = response.data?.data;
+        setCartCount(Number(cart?.totalItems ?? 0));
+      } catch {
+        setCartCount(0);
+      }
+    };
+
+    fetchCartCount();
+  }, [isAuthenticated, location.pathname]);
 
   const menuItems = [
     { key: '/', label: <Link to="/">Home</Link> },
     { key: '/shop', label: <Link to="/shop">Shop</Link> },
     { key: '/categories', label: <Link to="/categories">Categories</Link> },
     { key: '/about', label: <Link to="/about">About</Link> },
+    ...(isAuthenticated && isAdmin
+      ? [{ key: '/admin', label: <Link to="/admin">Dashboard</Link> }]
+      : []),
   ];
 
   const userMenuItems = [
+    ...(isAuthenticated && isAdmin
+      ? [{
+          key: 'dashboard',
+          icon: <DashboardOutlined />,
+          label: <Link to="/admin">Dashboard</Link>,
+        }]
+      : []),
     {
       key: 'account',
       icon: <UserOutlined />,
@@ -84,7 +118,7 @@ const Navbar = () => {
         <div className="hidden md:flex flex-1 justify-center">
           <Menu
             mode="horizontal"
-            selectedKeys={[location.pathname]}
+            selectedKeys={[selectedMenuKey]}
             items={menuItems}
             style={{ borderBottom: 'none', minWidth: 400, justifyContent: 'center' }}
           />
@@ -100,8 +134,8 @@ const Navbar = () => {
             <Button type="text" icon={<HeartOutlined style={{ fontSize: 20 }} />} />
           </Link>
 
-          <Link to="/cart">
-            <Badge count={2} color={token.colorPrimary}>
+          <Link to={isAuthenticated ? "/cart" : "/login"}>
+            <Badge count={cartCount} color={token.colorPrimary}>
               <Button type="text" icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />} />
             </Badge>
           </Link>
@@ -135,7 +169,7 @@ const Navbar = () => {
         onClose={() => setMobileMenuOpen(false)}
         open={mobileMenuOpen}
       >
-        <Menu mode="vertical" selectedKeys={[location.pathname]} items={menuItems} onClick={() => setMobileMenuOpen(false)} />
+        <Menu mode="vertical" selectedKeys={[selectedMenuKey]} items={menuItems} onClick={() => setMobileMenuOpen(false)} />
         <div style={{ marginTop: 20 }}>
           <Search placeholder="Search products..." onSearch={value => { navigate(`/shop?search=${value}`); setMobileMenuOpen(false); }} />
         </div>
