@@ -69,14 +69,10 @@ function Import-EnvFile {
     }
 }
 
-# Prefer a local env file when present so local credentials never leak into source-controlled settings.
-if (-not (Test-Path ".env.local") -and (Test-Path ".env.example")) {
-    Copy-Item ".env.example" ".env.local"
-    Write-Host "📝 Created .env.local from .env.example" -ForegroundColor Green
-}
-
-Import-EnvFile -Path ".env.local"
 Import-EnvFile -Path ".env"
+
+# Allow an optional local override file to win over the shared env file.
+Import-EnvFile -Path ".env.local"
 
 # Check if pom.xml exists
 if (-not (Test-Path "pom.xml")) {

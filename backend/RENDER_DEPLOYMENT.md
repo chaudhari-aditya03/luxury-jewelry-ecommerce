@@ -47,8 +47,6 @@ This file contains setup instructions for deploying the backend to Render.
    Click "Advanced" → "Add Environment Variable" and add:
 
    ```
-   SPRING_PROFILES_ACTIVE=prod
-   
    # Database Configuration
    DATABASE_URL=jdbc:mysql://YOUR_MYSQL_HOST:3306/jewelry_ecommerce?useSSL=true&serverTimezone=UTC
    DATABASE_USERNAME=your_db_username
