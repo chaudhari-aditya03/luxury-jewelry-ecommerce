@@ -22,13 +22,13 @@ public class ProductImage {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "image_url", length = 1000)
     private String imageUrl;
 
     @Column(name = "image_name", length = 255)
     private String imageName;
 
-    @Column(name = "image_path", length = 500)
+    @Column(name = "image_path", length = 1000)
     private String imagePath;
 
     @Column(name = "file_size")

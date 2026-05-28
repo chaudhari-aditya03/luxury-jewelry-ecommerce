@@ -1,64 +1,50 @@
 package com.jewelryshop.service.impl;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.jewelryshop.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class FileUploadServiceImpl implements FileUploadService {
 
-    @Value("${file.upload.dir:uploads}")
-    private String uploadDir;
+    private final Cloudinary cloudinary;
 
     private static final String[] ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"};
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     @Override
     public String uploadFile(MultipartFile file) {
         try {
-            log.info("Starting file upload. Upload directory: {}", uploadDir);
+            log.info("Starting file upload to Cloudinary. Original filename: {}", file.getOriginalFilename());
             
             // Validate file
             validateFile(file);
 
-            // Create upload directory if it doesn't exist
-            File uploadDirectory = new File(uploadDir);
-            if (!uploadDirectory.exists()) {
-                boolean created = uploadDirectory.mkdirs();
-                log.info("Created upload directory: {} (success: {})", uploadDir, created);
-            }
+            // Upload to Cloudinary
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                    "folder", "jewelry_shop/products",
+                    "resource_type", "auto"
+            ));
 
-            // Generate unique filename
-            String originalFilename = file.getOriginalFilename();
-            String fileExtension = getFileExtension(originalFilename);
-            String newFilename = UUID.randomUUID() + "." + fileExtension;
+            String secureUrl = (String) uploadResult.get("secure_url");
+            log.info("File uploaded successfully to Cloudinary: {}", secureUrl);
 
-            // Save file
-            Path filePath = Paths.get(uploadDir, newFilename).toAbsolutePath();
-            Files.write(filePath, file.getBytes());
-
-            log.info("File uploaded successfully: {}", newFilename);
-
-            // Return ONLY the filename (best practice for flexibility)
-            return newFilename;
+            return secureUrl;
 
         } catch (IOException e) {
-            log.error("Error uploading file: {}", e.getMessage(), e);
+            log.error("Error uploading file to Cloudinary: {}", e.getMessage(), e);
             throw new RuntimeException("File upload failed: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error during file upload: {}", e.getMessage(), e);
+            log.error("Unexpected error during Cloudinary upload: {}", e.getMessage(), e);
             throw new RuntimeException("File upload failed: " + e.getMessage());
         }
     }
@@ -70,22 +56,34 @@ public class FileUploadServiceImpl implements FileUploadService {
                 return;
             }
 
-            // Extract filename from URL or path
-            // Handles both: "filename.jpg" AND "/uploads/filename.jpg"
-            String filename = fileUrl;
-            if (fileUrl.contains("/")) {
-                filename = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            }
-
-            Path filePath = Paths.get(uploadDir, filename);
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
-                log.info("File deleted successfully: {}", filename);
-            } else {
-                log.warn("File not found for deletion: {}", filename);
+            // Cloudinary doesn't need to delete by URL easily without parsing public_id
+            if (fileUrl.contains("cloudinary.com")) {
+                String publicId = extractPublicId(fileUrl);
+                if (publicId != null) {
+                    cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+                    log.info("File deleted successfully from Cloudinary: {}", publicId);
+                }
             }
         } catch (IOException e) {
-            log.error("Error deleting file: {}", e.getMessage());
+            log.error("Error deleting file from Cloudinary: {}", e.getMessage());
+        }
+    }
+
+    private String extractPublicId(String fileUrl) {
+        try {
+            int lastDot = fileUrl.lastIndexOf(".");
+            
+            // Find where the folder starts
+            int folderStart = fileUrl.indexOf("jewelry_shop");
+            if (folderStart != -1) {
+                return fileUrl.substring(folderStart, lastDot);
+            }
+            
+            int lastSlash = fileUrl.lastIndexOf("/");
+            return fileUrl.substring(lastSlash + 1, lastDot);
+        } catch (Exception e) {
+            log.warn("Could not extract public_id from URL: {}", fileUrl);
+            return null;
         }
     }
 
@@ -95,8 +93,25 @@ public class FileUploadServiceImpl implements FileUploadService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("File size exceeds maximum limit of 5MB");
+            throw new RuntimeException("File size exceeds maximum limit of 10MB");
         }
+
+        String fileName = file.getOriginalFilename();
+        if (fileName != null) {
+            String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+            boolean isAllowed = false;
+            for (String allowed : ALLOWED_EXTENSIONS) {
+                if (allowed.equals(extension)) {
+                    isAllowed = true;
+                    break;
+                }
+            }
+            if (!isAllowed) {
+                throw new RuntimeException("Invalid file extension. Allowed: jpg, jpeg, png, gif, webp");
+            }
+        }
+    }
+}
 
         String fileExtension = getFileExtension(file.getOriginalFilename());
         boolean isAllowed = false;
