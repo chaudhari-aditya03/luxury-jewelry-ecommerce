@@ -19,17 +19,15 @@ public class FileUploadServiceImpl implements FileUploadService {
     private final Cloudinary cloudinary;
 
     private static final String[] ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"};
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     @Override
     public String uploadFile(MultipartFile file) {
         try {
             log.info("Starting file upload to Cloudinary. Original filename: {}", file.getOriginalFilename());
-            
-            // Validate file
+
             validateFile(file);
 
-            // Upload to Cloudinary
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                     "folder", "jewelry_shop/products",
                     "resource_type", "auto"
@@ -56,7 +54,6 @@ public class FileUploadServiceImpl implements FileUploadService {
                 return;
             }
 
-            // Cloudinary doesn't need to delete by URL easily without parsing public_id
             if (fileUrl.contains("cloudinary.com")) {
                 String publicId = extractPublicId(fileUrl);
                 if (publicId != null) {
@@ -72,15 +69,15 @@ public class FileUploadServiceImpl implements FileUploadService {
     private String extractPublicId(String fileUrl) {
         try {
             int lastDot = fileUrl.lastIndexOf(".");
-            
-            // Find where the folder starts
             int folderStart = fileUrl.indexOf("jewelry_shop");
+
             if (folderStart != -1) {
                 return fileUrl.substring(folderStart, lastDot);
             }
-            
+
             int lastSlash = fileUrl.lastIndexOf("/");
             return fileUrl.substring(lastSlash + 1, lastDot);
+
         } catch (Exception e) {
             log.warn("Could not extract public_id from URL: {}", fileUrl);
             return null;
@@ -88,7 +85,7 @@ public class FileUploadServiceImpl implements FileUploadService {
     }
 
     private void validateFile(MultipartFile file) {
-        if (file.isEmpty()) {
+        if (file == null || file.isEmpty()) {
             throw new RuntimeException("File is empty");
         }
 
@@ -96,24 +93,8 @@ public class FileUploadServiceImpl implements FileUploadService {
             throw new RuntimeException("File size exceeds maximum limit of 10MB");
         }
 
-        String fileName = file.getOriginalFilename();
-        if (fileName != null) {
-            String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-            boolean isAllowed = false;
-            for (String allowed : ALLOWED_EXTENSIONS) {
-                if (allowed.equals(extension)) {
-                    isAllowed = true;
-                    break;
-                }
-            }
-            if (!isAllowed) {
-                throw new RuntimeException("Invalid file extension. Allowed: jpg, jpeg, png, gif, webp");
-            }
-        }
-    }
-}
-
         String fileExtension = getFileExtension(file.getOriginalFilename());
+
         boolean isAllowed = false;
         for (String ext : ALLOWED_EXTENSIONS) {
             if (ext.equalsIgnoreCase(fileExtension)) {
@@ -129,7 +110,7 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     private String getFileExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
-            return "jpg";
+            return "";
         }
         return filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
     }
