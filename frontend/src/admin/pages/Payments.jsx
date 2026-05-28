@@ -134,7 +134,7 @@ const AdminPayments = () => {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      render: (amount) => <span style={{ fontWeight: 500, color: '#D4AF37' }}>{formatPrice(amount)}</span>,
+      render: (amount) => <span style={{ fontWeight: 500, color: '#C6A769' }}>{formatPrice(amount)}</span>,
       sorter: (a, b) => a.amount - b.amount,
     },
     {
@@ -200,13 +200,13 @@ const AdminPayments = () => {
 
   return (
     <AdminLayout>
-      <Title level={2} style={{ marginBottom: 24 }}>Payment History</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>Payment History</Title>
 
       <div style={{ marginBottom: 24 }}>
         <Space size="large">
           <Card size="small" style={{ width: 200 }}>
             <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Total Amount</div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: '#D4AF37' }}>
+            <div style={{ fontSize: 20, fontWeight: 600, color: '#C6A769' }}>
               {formatPrice(totalAmount)}
             </div>
           </Card>

@@ -332,7 +332,7 @@ const CheckoutPage = () => {
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <Text type="secondary">Amount</Text>
-                            <Text strong style={{ color: '#D4AF37' }}>{formatPrice(paymentSession.amount)}</Text>
+                            <Text strong style={{ color: '#C6A769' }}>{formatPrice(paymentSession.amount)}</Text>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <Text type="secondary">Merchant Reference</Text>
@@ -391,7 +391,7 @@ const CheckoutPage = () => {
                 <Divider style={{ margin: '10px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Title level={4}>Estimated Total</Title>
-                  <Title level={4} style={{ color: '#D4AF37' }}>{formatPrice(displayTotal)}</Title>
+                  <Title level={4} style={{ color: '#C6A769' }}>{formatPrice(displayTotal)}</Title>
                 </div>
 
                 <div style={{ marginTop: 20 }}>

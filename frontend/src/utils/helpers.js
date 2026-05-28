@@ -17,12 +17,24 @@ export const truncateText = (text, maxLength) => {
   return text.substring(0, maxLength) + '...';
 };
 
-export const formatDate = (date) => {
+export const formatDate = (dateValue) => {
+  const normalizedValue = typeof dateValue === 'string' ? dateValue.trim() : dateValue;
+
+  if (normalizedValue === null || normalizedValue === undefined || normalizedValue === '') {
+    return 'N/A';
+  }
+
+  const date = new Date(normalizedValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'N/A';
+  }
+
   return new Intl.DateTimeFormat('en-IN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(new Date(date));
+  }).format(date);
 };
 
 export const getInitials = (name) => {

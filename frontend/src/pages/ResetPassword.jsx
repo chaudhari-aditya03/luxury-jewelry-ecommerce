@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, message, Alert } from 'antd';
 import { LockOutlined, EyeInvisibleOutlined, EyeTwoTone, CheckCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { authService } from '../services';
 
 const ResetPasswordPage = () => {
@@ -40,92 +41,89 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-16"
-      style={{ background: 'linear-gradient(135deg, #faf9f7 0%, #f0ead8 100%)' }}>
+    <div className="auth-shell">
+      <aside className="auth-brand-panel">
+        <Link to="/" className="group flex items-center gap-3 no-underline">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-luxury text-white shadow-[0_10px_30px_rgba(17,17,17,0.15)] transition-transform duration-300 group-hover:scale-105">
+            <Sparkles className="h-5 w-5 text-gold" />
+          </div>
+          <div>
+            <p className="font-display text-xl font-semibold tracking-[0.14em] text-white">JEWELRY</p>
+            <p className="text-[11px] uppercase tracking-[0.45em] text-white/60">Luxury Maison</p>
+          </div>
+        </Link>
 
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #D4AF37, transparent)' }} />
-        <div className="absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #D4AF37, transparent)' }} />
-      </div>
+        <div className="max-w-lg space-y-6">
+          <p className="page-eyebrow text-white/70">Password recovery</p>
+          <h2 className="font-display text-5xl font-semibold leading-tight text-white">
+            Reset your
+            <span className="block text-gold">password securely.</span>
+          </h2>
+          <p className="max-w-md text-lg leading-8 text-white/72">
+            Choose a strong password you have not used before, then return to the maison experience.
+          </p>
+        </div>
 
-      <div className="relative w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10"
-          style={{ boxShadow: '0 20px 60px rgba(212,175,55,0.15), 0 4px 20px rgba(0,0,0,0.08)' }}>
+        <p className="text-sm text-white/45">Protected account access for the maison experience.</p>
+      </aside>
 
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
-              style={{ background: 'linear-gradient(135deg, #D4AF37, #b8860b)' }}>
-              💎
-            </div>
-            <span className="text-xl font-bold font-display">LuxeJewels</span>
+      <main className="auth-card">
+        <div className="auth-card-panel">
+          <div className="mb-8 lg:hidden">
+            <Link to="/" className="inline-flex items-center gap-2 no-underline">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-luxury text-white">
+                <Sparkles className="h-4 w-4 text-gold" />
+              </div>
+              <div>
+                <p className="font-display text-lg font-semibold tracking-[0.12em] text-luxury">JEWELRY</p>
+                <p className="text-[10px] uppercase tracking-[0.35em] text-muted">Luxury Maison</p>
+              </div>
+            </Link>
           </div>
 
           {success ? (
-            /* Success state */
             <div className="text-center py-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: 'rgba(34,197,94,0.12)' }}>
-                <CheckCircleOutlined style={{ fontSize: 32, color: '#22c55e' }} />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#ecfdf5] text-[#22c55e]">
+                <CheckCircleOutlined style={{ fontSize: 32 }} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Password reset!</h2>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                Your password has been changed successfully. Redirecting you to login…
-              </p>
-              <Link to="/login">
-                <Button
-                  type="primary"
-                  block
-                  className="h-11 rounded-lg font-semibold border-0"
-                  style={{ background: 'linear-gradient(135deg, #D4AF37, #b8860b)' }}
-                >
+              <p className="page-eyebrow">Success</p>
+              <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Password reset</h2>
+              <p className="mt-2 text-sm leading-7 text-muted">Your password has been changed successfully. Redirecting you to login…</p>
+              <Link to="/login" className="mt-6 inline-flex w-full items-center justify-center no-underline">
+                <Button type="primary" block className="!h-11 !rounded-full !border-0">
                   Go to Login
                 </Button>
               </Link>
             </div>
           ) : !tokenValid ? (
-            /* Invalid token state */
             <div className="text-center py-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: 'rgba(239,68,68,0.1)' }}>
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f2] text-[#ef4444]">
                 <span className="text-3xl">⚠️</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Invalid reset link</h2>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                This password reset link is invalid or has expired. Please request a new one.
-              </p>
-              <Link to="/forgot-password">
-                <Button
-                  type="primary"
-                  block
-                  className="h-11 rounded-lg font-semibold border-0"
-                  style={{ background: 'linear-gradient(135deg, #D4AF37, #b8860b)' }}
-                >
+              <p className="page-eyebrow">Invalid link</p>
+              <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Invalid reset link</h2>
+              <p className="mt-2 text-sm leading-7 text-muted">This password reset link is invalid or has expired. Please request a new one.</p>
+              <Link to="/forgot-password" className="mt-6 inline-flex w-full items-center justify-center no-underline">
+                <Button type="primary" block className="!h-11 !rounded-full !border-0">
                   Request New Link
                 </Button>
               </Link>
             </div>
           ) : (
-            /* Form state */
             <>
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                  style={{ background: 'rgba(212,175,55,0.12)' }}>
-                  <LockOutlined style={{ fontSize: 28, color: '#D4AF37' }} />
+              <div className="mb-8 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#faf6ea] text-gold">
+                  <LockOutlined style={{ fontSize: 28 }} />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Set new password</h1>
-                <p className="text-gray-500 text-sm">
-                  Choose a strong password you haven't used before.
-                </p>
+                <p className="page-eyebrow">Set new password</p>
+                <h1 className="mt-3 text-3xl font-semibold text-charcoal-700">Choose a strong password</h1>
+                <p className="mt-2 text-sm leading-7 text-muted">Choose a strong password you have not used before.</p>
               </div>
 
               <Form name="reset-password" onFinish={onFinish} layout="vertical" size="large">
                 <Form.Item
                   name="newPassword"
-                  label={<span className="text-gray-700 font-medium">New Password</span>}
+                  label="New Password"
                   rules={[
                     { required: true, message: 'Password is required' },
                     { min: 6, message: 'At least 6 characters' }
@@ -134,15 +132,14 @@ const ResetPasswordPage = () => {
                 >
                   <Input.Password
                     placeholder="Min. 6 characters"
-                    className="rounded-lg h-12"
-                    style={{ borderColor: '#e5e7eb' }}
-                    iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                    className="!h-12 !rounded-full"
+                    iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                   />
                 </Form.Item>
 
                 <Form.Item
                   name="confirmPassword"
-                  label={<span className="text-gray-700 font-medium">Confirm New Password</span>}
+                  label="Confirm New Password"
                   dependencies={['newPassword']}
                   hasFeedback
                   rules={[
@@ -157,29 +154,19 @@ const ResetPasswordPage = () => {
                 >
                   <Input.Password
                     placeholder="Repeat your new password"
-                    className="rounded-lg h-12"
-                    style={{ borderColor: '#e5e7eb' }}
-                    iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                    className="!h-12 !rounded-full"
+                    iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                   />
                 </Form.Item>
 
-                {/* Password strength hints */}
-                <div className="mb-5 p-3 rounded-lg text-xs text-gray-500 space-y-1"
-                  style={{ background: '#fafaf8', border: '1px solid #f0e8d8' }}>
-                  <p className="font-medium text-gray-600 mb-1.5">Password requirements:</p>
-                  <p>• Minimum 6 characters</p>
-                  <p>• Mix of letters and numbers recommended</p>
+                <div className="mb-5 rounded-[1.25rem] border border-[#eadfca] bg-[#faf8f1] p-4 text-xs leading-6 text-muted">
+                  <p className="mb-2 font-medium text-charcoal-700">Password requirements:</p>
+                  <p>Minimum 6 characters</p>
+                  <p>Mix of letters and numbers recommended</p>
                 </div>
 
                 <Form.Item className="mb-0">
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    block
-                    loading={loading}
-                    className="h-12 rounded-lg text-base font-semibold border-0"
-                    style={{ background: 'linear-gradient(135deg, #D4AF37, #b8860b)', color: '#fff' }}
-                  >
+                  <Button type="primary" htmlType="submit" block loading={loading} className="!h-12 !rounded-full !border-0 !text-base">
                     Reset Password
                   </Button>
                 </Form.Item>
@@ -187,14 +174,14 @@ const ResetPasswordPage = () => {
             </>
           )}
 
-          <div className="text-center mt-6 pt-6 border-t border-gray-100">
-            <Link to="/login" className="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-800 no-underline transition-colors">
+          <div className="mt-6 border-t border-[#eadfca] pt-6 text-center">
+            <Link to="/login" className="inline-flex items-center justify-center gap-2 text-sm text-muted no-underline transition-colors hover:text-gold">
               <ArrowLeftOutlined />
               Back to Sign In
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

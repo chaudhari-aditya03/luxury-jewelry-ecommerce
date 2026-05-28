@@ -215,7 +215,7 @@ const AdminProducts = () => {
           </Space>
         </div>
       ),
-      filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+      filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#C6A769' : undefined }} />,
       onFilter: (value, record) => record.name.toLowerCase().includes(value.toLowerCase()),
     },
     {
@@ -263,7 +263,7 @@ const AdminProducts = () => {
   return (
     <AdminLayout>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2} style={{ margin: 0 }}>Products</Title>
+        <Title level={2} style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Products</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()} size="large">
           Add Product
         </Button>

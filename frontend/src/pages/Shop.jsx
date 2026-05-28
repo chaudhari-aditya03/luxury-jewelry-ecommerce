@@ -33,7 +33,7 @@ const ShopPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const pageSize = 12;
+  const pageSize = 9;
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -80,6 +80,11 @@ const ShopPage = () => {
         id: product.id,
         name: product.name,
         price: Number(product.discountPrice ?? product.price ?? 0),
+        originalPrice: Number(product.discountPrice ? product.price : 0),
+        discountPercentage:
+          product.discountPrice && Number(product.price || 0) > Number(product.discountPrice || 0)
+            ? Math.round(((Number(product.price) - Number(product.discountPrice)) / Number(product.price)) * 100)
+            : 0,
         rating: product.averageRating ?? 0,
         category: product.categoryName || 'Jewelry',
         image: getImageUrl(product.images?.find((img) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl),
@@ -250,7 +255,7 @@ const ShopPage = () => {
                 <>
                   <Row gutter={[24, 24]} className="shop-products-grid">
                     {products.map(product => (
-                      <Col xs={24} sm={12} lg={8} key={product.id} className="shop-product-col">
+                      <Col xs={24} sm={12} md={12} lg={8} xl={8} key={product.id} className="shop-product-col">
                         <ProductCard
                           product={product}
                           onAddToCart={handleAddToCart}

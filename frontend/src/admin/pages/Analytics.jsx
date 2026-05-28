@@ -53,7 +53,7 @@ const AdminAnalytics = () => {
 
   return (
     <AdminLayout>
-      <Title level={2} style={{ marginBottom: 24 }}>Analytics</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>Analytics</Title>
 
       {summary && (
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
@@ -63,7 +63,7 @@ const AdminAnalytics = () => {
                 title="Total Revenue"
                 value={summary.totalRevenue}
                 prefix="₹"
-                valueStyle={{ color: '#D4AF37' }}
+                valueStyle={{ color: '#C6A769' }}
               />
             </Card>
           </Col>
@@ -72,7 +72,7 @@ const AdminAnalytics = () => {
               <Statistic
                 title="Total Orders"
                 value={summary.totalOrders}
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: '#C6A769' }}
               />
             </Card>
           </Col>
@@ -111,8 +111,8 @@ const AdminAnalytics = () => {
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#D4AF37"
-                    fill="#D4AF37"
+                    stroke="#C6A769"
+                    fill="#C6A769"
                     fillOpacity={0.3}
                     strokeWidth={2}
                   />

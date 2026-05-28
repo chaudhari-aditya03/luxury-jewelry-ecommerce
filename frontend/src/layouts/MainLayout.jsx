@@ -4,9 +4,9 @@ import LuxuryFooter from '../components/landing/LuxuryFooter';
 
 const MainLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-background text-text">
+    <div className="min-h-screen overflow-x-hidden bg-background text-text">
       <LuxuryNavbar />
-      <main className="px-4 pb-10 pt-24 sm:px-6 lg:px-8">
+      <main className="px-4 pb-12 pt-24 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-7xl">
           {children}
         </div>

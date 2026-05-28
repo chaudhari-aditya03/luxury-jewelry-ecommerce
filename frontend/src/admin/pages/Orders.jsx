@@ -158,7 +158,7 @@ const AdminOrders = () => {
 
   return (
     <AdminLayout>
-      <Title level={2} style={{ marginBottom: 24 }}>Orders</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>Orders</Title>
 
       <Table
         columns={columns}

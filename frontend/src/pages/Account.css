@@ -1,0 +1,513 @@
+.account-page {
+  background:
+    radial-gradient(circle at top right, rgba(198, 167, 105, 0.16), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(16, 111, 79, 0.08), transparent 24%),
+    #f8f5f0;
+}
+
+.account-shell {
+  max-width: 1220px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.account-hero,
+.account-panel,
+.account-auth-card,
+.account-empty-card,
+.account-summary-card,
+.account-order-card,
+.account-payment-card,
+.account-preview-card,
+.account-address-card,
+.account-section-card,
+.account-modal-card {
+  border: 1px solid rgba(198, 167, 105, 0.18);
+  border-radius: 28px;
+  background: linear-gradient(145deg, #ffffff 0%, #fcfaf6 100%);
+  box-shadow: 0 18px 44px rgba(17, 17, 17, 0.06);
+}
+
+.account-hero {
+  padding: 30px;
+}
+
+.account-hero-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.account-kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #c6a769;
+  font-weight: 600;
+}
+
+.account-title {
+  margin: 10px 0 0;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.1;
+  color: #1f1f1f;
+}
+
+.account-subtitle {
+  margin: 10px 0 0;
+  max-width: 760px;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 78px;
+  height: 78px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c6a769, #b58c47);
+  color: #ffffff;
+  font-family: "Playfair Display", serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  box-shadow: 0 12px 24px rgba(17, 17, 17, 0.14);
+}
+
+.account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-pill--gold {
+  border: 1px solid rgba(198, 167, 105, 0.22);
+  background: rgba(198, 167, 105, 0.1);
+  color: #9c7a3f;
+}
+
+.account-pill--neutral {
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+  color: #5d5d5d;
+}
+
+.account-layout {
+  display: grid;
+  gap: 22px;
+}
+
+.account-sidebar {
+  position: sticky;
+  top: 108px;
+  align-self: start;
+}
+
+.account-nav-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-nav-card {
+  border: 1px solid #eadfca;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 14px 16px;
+  text-align: left;
+  color: #1f1f1f;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.account-nav-card:hover {
+  transform: translateY(-1px);
+  border-color: #c6a769;
+  box-shadow: 0 12px 26px rgba(17, 17, 17, 0.08);
+}
+
+.account-nav-card.is-active {
+  border-color: rgba(198, 167, 105, 0.38);
+  background: linear-gradient(135deg, rgba(198, 167, 105, 0.12), rgba(16, 111, 79, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 10px 20px rgba(17, 17, 17, 0.06);
+}
+
+.account-nav-label {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.account-nav-description {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #6b7280;
+}
+
+.account-panel {
+  padding: 26px;
+}
+
+.account-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.account-section-kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #c6a769;
+  font-weight: 600;
+}
+
+.account-section-title {
+  margin: 8px 0 0;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  line-height: 1.15;
+  color: #1f1f1f;
+}
+
+.account-section-subtitle {
+  margin: 8px 0 0;
+  color: #6b7280;
+  line-height: 1.7;
+}
+
+.account-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.account-form-card,
+.account-info-card,
+.account-order-card,
+.account-payment-card,
+.account-preview-card,
+.account-address-card,
+.account-empty-card {
+  border: 1px solid rgba(198, 167, 105, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 18px;
+}
+
+.account-empty-card,
+.account-auth-card {
+  padding: 34px 24px;
+}
+
+.account-mini-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.account-summary-grid,
+.account-order-grid,
+.account-preview-grid,
+.account-address-grid,
+.account-payment-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.account-summary-item {
+  border: 1px solid rgba(198, 167, 105, 0.14);
+  border-radius: 20px;
+  background: #fff;
+  padding: 16px;
+}
+
+.account-summary-label {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #9c8b67;
+}
+
+.account-summary-value {
+  margin: 6px 0 0;
+  font-family: "Playfair Display", serif;
+  font-size: 1.15rem;
+  color: #1f1f1f;
+  word-break: break-word;
+}
+
+.account-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.account-primary-btn,
+.account-secondary-btn,
+.account-danger-btn,
+.account-ghost-btn {
+  min-height: 48px;
+  border-radius: 999px !important;
+  padding-inline: 22px;
+  font-weight: 600 !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+
+.account-primary-btn {
+  background: linear-gradient(135deg, #c6a769, #b58c47) !important;
+  border: 1px solid #c6a769 !important;
+  color: #ffffff !important;
+}
+
+.account-primary-btn:hover,
+.account-primary-btn:focus {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #b99758, #a97d3e) !important;
+  border-color: #b99758 !important;
+}
+
+.account-secondary-btn {
+  background: #ffffff !important;
+  border: 1px solid #eadfca !important;
+  color: #1f1f1f !important;
+}
+
+.account-secondary-btn:hover,
+.account-secondary-btn:focus {
+  transform: translateY(-1px);
+  border-color: #c6a769 !important;
+  color: #c6a769 !important;
+}
+
+.account-danger-btn {
+  background: #fff6f6 !important;
+  border: 1px solid #efc7c7 !important;
+  color: #b84b4b !important;
+}
+
+.account-danger-btn:hover,
+.account-danger-btn:focus {
+  transform: translateY(-1px);
+  border-color: #e39d9d !important;
+  background: #fff0f0 !important;
+}
+
+.account-ghost-btn {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(17, 17, 17, 0.08) !important;
+  color: #1f1f1f !important;
+}
+
+.account-ghost-btn:hover,
+.account-ghost-btn:focus {
+  transform: translateY(-1px);
+  border-color: #c6a769 !important;
+}
+
+.account-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-badge--gold {
+  border: 1px solid rgba(198, 167, 105, 0.22);
+  background: rgba(198, 167, 105, 0.1);
+  color: #9c7a3f;
+}
+
+.account-badge--emerald {
+  border: 1px solid rgba(16, 111, 79, 0.18);
+  background: rgba(16, 111, 79, 0.08);
+  color: #0f6f4f;
+}
+
+.account-badge--neutral {
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+  color: #5d5d5d;
+}
+
+.account-stat-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-order-grid,
+.account-preview-grid,
+.account-address-grid,
+.account-payment-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.account-order-meta,
+.account-payment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.account-order-actions,
+.account-preview-actions,
+.account-address-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.account-divider {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, rgba(198, 167, 105, 0.35), transparent);
+  margin: 22px 0;
+}
+
+.account-auth-title {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2rem, 3.2vw, 2.8rem);
+  color: #1f1f1f;
+}
+
+.account-auth-subtitle {
+  margin: 12px auto 0;
+  max-width: 680px;
+  color: #6b7280;
+  line-height: 1.75;
+}
+
+.account-text-input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #eadfca;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 12px 14px;
+  color: #1f1f1f;
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.account-text-input::placeholder {
+  color: #a6a6a6;
+}
+
+.account-text-input:focus {
+  border-color: #c6a769;
+  box-shadow: 0 0 0 3px rgba(198, 167, 105, 0.12);
+}
+
+.account-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 24px;
+  margin-bottom: 18px;
+  background: linear-gradient(145deg, rgba(198, 167, 105, 0.14), rgba(16, 111, 79, 0.1));
+  color: #c6a769;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 12px 24px rgba(17, 17, 17, 0.08);
+}
+
+@media (min-width: 768px) {
+  .account-hero-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    align-items: end;
+  }
+
+  .account-layout {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .account-nav-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .account-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-order-grid,
+  .account-preview-grid,
+  .account-payment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-address-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .account-order-grid,
+  .account-preview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .account-hero {
+    border-radius: 22px;
+    padding: 22px;
+  }
+
+  .account-panel {
+    padding: 20px;
+  }
+
+  .account-auth-card,
+  .account-empty-card,
+  .account-summary-card,
+  .account-order-card,
+  .account-payment-card,
+  .account-preview-card,
+  .account-address-card,
+  .account-section-card {
+    border-radius: 22px;
+  }
+
+  .account-button-row,
+  .account-order-actions,
+  .account-preview-actions,
+  .account-address-actions {
+    flex-direction: column;
+  }
+
+  .account-primary-btn,
+  .account-secondary-btn,
+  .account-danger-btn,
+  .account-ghost-btn {
+    width: 100%;
+  }
+
+  .account-stat-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}

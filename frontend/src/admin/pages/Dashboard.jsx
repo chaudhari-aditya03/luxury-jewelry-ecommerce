@@ -58,9 +58,9 @@ const AdminDashboard = () => {
       icon: '💰',
       change: '+12.5%',
       positive: true,
-      gradient: 'linear-gradient(135deg, #D4AF37 0%, #b8860b 100%)',
-      textColor: '#7a5c00',
-      bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+      gradient: 'linear-gradient(135deg, #C6A769 0%, #B0925B 100%)',
+      textColor: '#70541e',
+      bg: 'linear-gradient(135deg, #fdfbf7, #f6f0df)',
     },
     {
       title: 'Total Orders',
@@ -171,7 +171,7 @@ const AdminDashboard = () => {
                 <p className="text-gray-400 text-sm">Monthly revenue for {new Date().getFullYear()}</p>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
-                style={{ background: 'rgba(212,175,55,0.1)', color: '#b8860b' }}>
+                style={{ background: 'rgba(198,167,105,0.1)', color: '#B0925B' }}>
                 ₹ Revenue
               </div>
             </div>
@@ -185,15 +185,15 @@ const AdminDashboard = () => {
                   <AreaChart data={monthlySales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#C6A769" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#C6A769" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={v => `₹${v / 1000}k`} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="sales" stroke="#D4AF37" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" name="sales" />
+                    <Area type="monotone" dataKey="sales" stroke="#C6A769" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" name="sales" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -235,7 +235,7 @@ const AdminDashboard = () => {
                 className="group flex items-center gap-4 p-4 bg-white rounded-2xl no-underline transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
                 style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
-                  style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(184,134,11,0.07))' }}>
+                  style={{ background: 'linear-gradient(135deg, rgba(198,167,105,0.12), rgba(176,146,91,0.07))' }}>
                   {link.icon}
                 </div>
                 <div>

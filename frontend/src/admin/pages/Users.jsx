@@ -72,7 +72,7 @@ const AdminUsers = () => {
       key: 'user',
       render: (_, record) => (
         <Space>
-          <Avatar icon={<UserOutlined />} style={{ backgroundColor: record.role === 'ADMIN' ? '#D4AF37' : '#1890ff' }} />
+          <Avatar icon={<UserOutlined />} style={{ backgroundColor: record.role === 'ADMIN' ? '#C6A769' : '#16a34a' }} />
           <div>
             <div style={{ fontWeight: 500 }}>{record.name}</div>
             <div style={{ fontSize: 12, color: '#888' }}>{record.email}</div>
@@ -140,7 +140,7 @@ const AdminUsers = () => {
 
   return (
     <AdminLayout>
-      <Title level={2} style={{ marginBottom: 24 }}>Users</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>Users</Title>
 
       <div style={{ marginBottom: 16 }}>
         <Input

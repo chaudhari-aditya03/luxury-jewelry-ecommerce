@@ -7,18 +7,19 @@ import { cartService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
-    {label: 'Home', href: '/'},
+  { label: 'Home', href: '/' },
   { label: 'Shop', href: '/shop' },
-  { label: 'Wishlist', href: '/wishlist' },
   { label: 'Our Story', href: '/our-story' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 const mobileQuickLinks = [
-  {label: 'Home', href: '/'},
+  { label: 'Home', href: '/' },
   { label: 'Shop', href: '/shop' },
   { label: 'Wishlist', href: '/wishlist' },
   { label: 'Account', href: '/account' },
   { label: 'Cart', href: '/cart' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 const LuxuryNavbar = () => {
@@ -90,8 +91,10 @@ const LuxuryNavbar = () => {
     navigate(`/shop?search=${encodeURIComponent(query)}`);
   };
 
+  const isActiveRoute = (href) => (href === '/' ? activeSection === '/' : activeSection.startsWith(href));
+
   const linkClass = (href) => {
-    const isActive = activeSection === href;
+    const isActive = isActiveRoute(href);
     return `relative inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${isActive ? 'text-luxury' : 'text-text/80 hover:text-luxury'}`;
   };
 
@@ -132,7 +135,7 @@ const LuxuryNavbar = () => {
                 <motion.span
                   className="absolute -bottom-2 left-0 h-px w-full origin-left bg-gold"
                   initial={false}
-                  animate={{ scaleX: activeSection === item.href ? 1 : 0 }}
+                  animate={{ scaleX: isActiveRoute(item.href) ? 1 : 0 }}
                   transition={{ duration: 0.25 }}
                 />
               </Link>
@@ -324,7 +327,7 @@ const LuxuryNavbar = () => {
                         key={item.label}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center justify-between rounded-2xl border border-luxury/10 px-4 py-4 text-base font-medium text-luxury no-underline transition-colors hover:border-gold/40 hover:bg-background"
+                        className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-base font-medium no-underline transition-colors ${isActiveRoute(item.href) ? 'border-gold/50 bg-background text-gold' : 'border-luxury/10 text-luxury hover:border-gold/40 hover:bg-background'}`}
                       >
                         {item.label}
                         <ChevronRight className="h-4 w-4 text-muted" />
@@ -338,7 +341,7 @@ const LuxuryNavbar = () => {
                         key={item.label}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className="rounded-2xl bg-background px-4 py-4 text-sm font-medium text-luxury no-underline"
+                        className={`rounded-2xl px-4 py-4 text-sm font-medium no-underline ${isActiveRoute(item.href) ? 'bg-background text-gold' : 'bg-background text-luxury'}`}
                       >
                         {item.label}
                       </Link>

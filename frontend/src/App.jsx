@@ -11,6 +11,8 @@ import MainLayout from './layouts/MainLayout';
 
 // Pages
 import HomePage from './pages/Home';
+import AboutPage from './pages/About';
+import ContactPage from './pages/Contact';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ForgotPasswordPage from './pages/ForgotPassword';
@@ -66,6 +68,9 @@ function App() {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/shop" element={<ShopPage />} />
               <Route path="/product/:id" element={<ProductDetailPage />} />
+              <Route path="/our-story" element={<AboutPage />} />
+              <Route path="/about" element={<Navigate to="/our-story" replace />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route
                 path="/cart"
                 element={

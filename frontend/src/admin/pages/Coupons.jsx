@@ -115,7 +115,7 @@ const AdminCoupons = () => {
   return (
     <AdminLayout>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2} style={{ margin: 0 }}>Coupons</Title>
+        <Title level={2} style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Coupons</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
           Create Coupon
         </Button>

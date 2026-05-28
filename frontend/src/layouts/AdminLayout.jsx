@@ -70,36 +70,92 @@ const AdminLayout = ({ children }) => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed} theme="light" style={{ boxShadow: '2px 0 8px rgba(0,0,0,0.05)' }}>
-        <div className="logo" style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 'bold', color: '#D4AF37' }}>
-          {collapsed ? 'JS' : 'Jewelry Store'}
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        theme="dark"
+        style={{
+          boxShadow: '4px 0 24px rgba(17, 17, 17, 0.08)',
+          background: '#111111',
+        }}
+      >
+        <div
+          className="logo"
+          style={{
+            height: 80,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: collapsed ? 18 : 15,
+            fontWeight: '600',
+            color: '#C6A769',
+            letterSpacing: collapsed ? '0' : '0.2em',
+            borderBottom: '1px solid rgba(198, 167, 105, 0.15)',
+            transition: 'all 0.3s ease',
+          }}
+        >
+          {collapsed ? '💎' : '💎 MAISON'}
         </div>
         <Menu
-          theme="light"
+          theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
           items={menuItems}
-          style={{ borderRight: 0 }}
+          style={{
+            borderRight: 0,
+            background: '#111111',
+            paddingTop: 16,
+          }}
         />
       </Sider>
-      <Layout className="site-layout">
-        <Header style={{ padding: '0 24px', background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+      <Layout className="site-layout" style={{ background: '#f8f5f0' }}>
+        <Header
+          style={{
+            padding: '0 32px',
+            background: '#ffffff',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+            height: 80,
+            borderBottom: '1px solid rgba(198,167,105,0.08)'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
               className: 'trigger',
               onClick: () => setCollapsed(!collapsed),
-              style: { fontSize: 18, marginRight: 24, cursor: 'pointer' }
+              style: { fontSize: 18, marginRight: 24, cursor: 'pointer', color: '#1f1f1f' }
             })}
-            <Breadcrumb items={[{ title: 'Admin' }, { title: getBreadcrumbTitle() }]} />
+            <Breadcrumb
+              items={[{ title: 'Maison' }, { title: <span style={{ color: '#C6A769', textTransform: 'capitalize', fontWeight: '500' }}>{getBreadcrumbTitle()}</span> }]}
+            />
           </div>
 
           <Space size="large">
-            <Button type="text" icon={<BellOutlined style={{ fontSize: 18 }} />} />
+            <Button
+              type="text"
+              icon={<BellOutlined style={{ fontSize: 18, color: '#1f1f1f' }} />}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: '#f8f5f0'
+              }}
+            />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }}>
               <span>
-                <Space style={{ cursor: 'pointer' }}>
-                  <Avatar style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>A</Avatar>
-                  <span>{user?.fullName || user?.firstName || 'Admin'}</span>
+                <Space style={{ cursor: 'pointer', padding: '4px 12px', borderRadius: 9999, background: '#f8f5f0' }}>
+                  <Avatar style={{ backgroundColor: '#C6A769', color: '#ffffff', fontWeight: 'bold' }}>
+                    {(user?.fullName || user?.firstName || 'A').charAt(0).toUpperCase()}
+                  </Avatar>
+                  <span style={{ fontWeight: '600', fontSize: 13, color: '#1f1f1f' }}>
+                    {user?.fullName || user?.firstName || 'Admin'}
+                  </span>
                 </Space>
               </span>
             </Dropdown>
@@ -107,11 +163,13 @@ const AdminLayout = ({ children }) => {
         </Header>
         <Content
           style={{
-            margin: '24px 16px',
-            padding: 24,
+            margin: '24px',
+            padding: '32px',
             minHeight: 280,
-            background: '#fff',
-            borderRadius: 8
+            background: '#ffffff',
+            borderRadius: 24,
+            boxShadow: '0 8px 30px rgba(17,17,17,0.02)',
+            border: '1px solid rgba(198,167,105,0.08)'
           }}
         >
           {children}

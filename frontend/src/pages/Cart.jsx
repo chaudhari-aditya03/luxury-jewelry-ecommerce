@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Table, Button, InputNumber, Typography, Card, Row, Col,
-  Input, Space, Divider, message, Popconfirm, Empty, Tooltip
+  Input, Space, Divider, message, Popconfirm, Empty
 } from 'antd';
 import { DeleteOutlined, ShoppingCartOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import MainLayout from '../layouts/MainLayout';
@@ -136,76 +136,124 @@ const CartPage = () => {
   if (!isLoading && cartItems.length === 0) {
     return (
       <MainLayout>
-        <div style={{ textAlign: 'center', padding: '100px 20px' }}>
-          <ShoppingCartOutlined style={{ fontSize: 64, color: '#ccc', marginBottom: 20 }} />
-          <Title level={3}>Your Cart is Empty</Title>
-          <Paragraph style={{ color: '#888', marginBottom: 30 }}>Looks like you haven't added any luxury items yet.</Paragraph>
-          <Link to="/shop">
-            <Button type="primary" size="large">Start Shopping</Button>
-          </Link>
-        </div>
+        <section className="page-section">
+          <div className="page-shell">
+            <div className="page-card p-8 text-center md:p-12">
+              <ShoppingCartOutlined style={{ fontSize: 64, color: '#c6a769', marginBottom: 20 }} />
+              <Title level={3} className="!mb-2">Your Cart is Empty</Title>
+              <Paragraph className="!mx-auto !mb-8 !max-w-xl !text-muted">
+                Looks like you haven't added any luxury items yet.
+              </Paragraph>
+              <Link to="/shop">
+                <Button type="primary" size="large">Start Shopping</Button>
+              </Link>
+            </div>
+          </div>
+        </section>
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      <div style={{ padding: '40px 0' }}>
-        <Title level={2} style={{ fontFamily: "'Playfair Display', serif", marginBottom: 30 }}>Shopping Cart</Title>
+      <section className="page-section">
+        <div className="page-shell content-stack">
+          <header className="page-card p-6 md:p-8">
+            <p className="page-eyebrow">Shopping Bag</p>
+            <h1 className="page-title mt-3">Your Cart</h1>
+            <p className="page-subtitle">Review your selected pieces, adjust quantities, and continue to checkout when ready.</p>
+          </header>
 
-        <Row gutter={[32, 32]}>
-          <Col xs={24} lg={16}>
-            <Table
-              columns={columns}
-              dataSource={cartItems}
-              pagination={false}
-              loading={isLoading}
-              scroll={{ x: 600 }}
-              style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-            />
-            <div style={{ marginTop: 24 }}>
-              <Link to="/shop">
-                <Button icon={<ArrowRightOutlined rotate={180} />}>Continue Shopping</Button>
-              </Link>
-            </div>
-          </Col>
+          <Row gutter={[32, 32]}>
+            <Col xs={24} lg={16}>
+              <div className="hidden md:block">
+                <Table
+                  columns={columns}
+                  dataSource={cartItems}
+                  pagination={false}
+                  loading={isLoading}
+                  scroll={{ x: 600 }}
+                  style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+                />
+              </div>
 
-          <Col xs={24} lg={8}>
-            <Card title="Order Summary" variant="borderless" style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <Space direction="vertical" style={{ width: '100%' }} size="large">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>Subtotal</Text>
-                  <Text strong>{formatPrice(subtotal)}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>Tax (18% GST)</Text>
-                  <Text strong>{formatPrice(tax)}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>Shipping</Text>
-                  <Text type="success">Free</Text>
-                </div>
+              <div className="space-y-4 md:hidden">
+                {cartItems.map((item) => (
+                  <article key={item.id} className="page-card-soft p-4">
+                    <div className="flex gap-4">
+                      <img src={item.image} alt={item.name} className="h-24 w-20 rounded-2xl object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/product/${item.productId}`} className="line-clamp-2 font-display text-lg font-semibold text-luxury no-underline">
+                          {item.name}
+                        </Link>
+                        {item.variantName ? <p className="mt-1 text-sm text-muted">{item.variantName}</p> : null}
+                        <p className="mt-2 text-sm font-semibold text-gold">{formatPrice(item.price)}</p>
+                      </div>
+                    </div>
 
-                <Divider style={{ margin: '12px 0' }} />
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <div className="flex flex-1 items-center gap-3">
+                        <InputNumber
+                          min={1}
+                          max={10}
+                          value={item.quantity}
+                          onChange={(value) => handleQuantityChange(item.productId, value)}
+                          className="!h-11 !w-full !rounded-full"
+                        />
+                        <Popconfirm title="Remove this item?" onConfirm={() => handleRemove(item.productId)}>
+                          <Button type="text" danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                      </div>
+                      <Text strong>{formatPrice(item.price * item.quantity)}</Text>
+                    </div>
+                  </article>
+                ))}
+              </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Title level={4}>Total</Title>
-                  <Title level={4} style={{ color: '#D4AF37' }}>{formatPrice(total)}</Title>
-                </div>
+              <div className="mt-6">
+                <Link to="/shop">
+                  <Button icon={<ArrowRightOutlined rotate={180} />}>Continue Shopping</Button>
+                </Link>
+              </div>
+            </Col>
 
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Input placeholder="Coupon Code" value={couponCode} onChange={e => setCouponCode(e.target.value)} />
-                  <Button onClick={() => message.info('Invalid Coupon')}>Apply</Button>
-                </div>
+            <Col xs={24} lg={8}>
+              <Card title="Order Summary" variant="borderless" style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <Space direction="vertical" style={{ width: '100%' }} size="large">
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>Subtotal</Text>
+                    <Text strong>{formatPrice(subtotal)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>Tax (18% GST)</Text>
+                    <Text strong>{formatPrice(tax)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>Shipping</Text>
+                    <Text type="success">Free</Text>
+                  </div>
 
-                <Button type="primary" block size="large" onClick={() => navigate('/checkout')}>
-                  Proceed to Checkout
-                </Button>
-              </Space>
-            </Card>
-          </Col>
-        </Row>
-      </div>
+                  <Divider style={{ margin: '12px 0' }} />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Title level={4}>Total</Title>
+                    <Title level={4} style={{ color: '#C6A769' }}>{formatPrice(total)}</Title>
+                  </div>
+
+                  <div className="stacked-actions">
+                    <Input placeholder="Coupon Code" value={couponCode} onChange={e => setCouponCode(e.target.value)} />
+                    <Button onClick={() => message.info('Invalid Coupon')}>Apply</Button>
+                  </div>
+
+                  <Button type="primary" block size="large" onClick={() => navigate('/checkout')}>
+                    Proceed to Checkout
+                  </Button>
+                </Space>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      </section>
     </MainLayout>
   );
 };
