@@ -49,6 +49,8 @@ const mapProduct = (data) => {
     description: data.description,
     price: Number(data.discountPrice ?? data.price ?? 0),
     originalPrice: Number(data.price ?? 0),
+    discountPrice: Number(data.discountPrice ?? 0),
+    discountPercentage: Number(data.discountPercentage ?? 0),
     rating: Number(data.averageRating ?? 0),
     reviewCount: Number(data.reviewCount ?? data.totalReviews ?? 120),
     category: data.categoryName || data.category?.name || 'Jewelry',
@@ -82,6 +84,8 @@ const productDetails = [
     value: 'Complimentary insured delivery',
   },
 ];
+
+const formatMoney = (value) => currencyFormatter.format(Number(value || 0));
 
 const TrustBadge = ({ icon: Icon, title, description }) => (
   <div className="flex items-start gap-4 rounded-[1.4rem] border border-luxury/10 bg-white px-4 py-4 shadow-[0_12px_30px_rgba(17,17,17,0.04)]">
@@ -247,6 +251,11 @@ const ProductDetailPage = () => {
     return `${reviews.toLocaleString('en-IN')} reviews`;
   };
 
+  const savedAmount = Math.max(0, Number(product.originalPrice || 0) - Number(product.price || 0));
+  const saleWindow = product.saleStartDate && product.saleEndDate
+    ? `${new Date(product.saleStartDate).toLocaleDateString('en-IN')} to ${new Date(product.saleEndDate).toLocaleDateString('en-IN')}`
+    : 'No scheduled sale';
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -363,6 +372,26 @@ const ProductDetailPage = () => {
                   <p className="text-sm text-muted">Hand-finished jewelry edit</p>
                 </div>
 
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Tag color="gold" className="m-0 rounded-full border-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
+                    {product.category}
+                  </Tag>
+                  {product.isFeatured ? (
+                    <Tag color="gold" className="m-0 rounded-full border-0 bg-[#fff4e0] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#977132]">
+                      Featured
+                    </Tag>
+                  ) : null}
+                  {product.stock > 0 ? (
+                    <Tag color="green" className="m-0 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]">
+                      In stock
+                    </Tag>
+                  ) : (
+                    <Tag color="red" className="m-0 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]">
+                      Out of stock
+                    </Tag>
+                  )}
+                </div>
+
                 <Title level={1} className="!mt-4 !font-display !text-4xl !font-semibold !leading-tight !text-luxury md:!text-5xl">
                   {product.name}
                 </Title>
@@ -383,9 +412,24 @@ const ProductDetailPage = () => {
                   </Text>
                   {product.originalPrice > product.price ? (
                     <Tag color="gold" className="m-0 rounded-full border-0 bg-[#fff4e0] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#977132]">
-                      Limited offer
+                      Save {currencyFormatter.format(savedAmount)}
                     </Tag>
                   ) : null}
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-gold">SKU</p>
+                    <p className="mt-2 text-sm font-medium text-text/80">{product.sku || 'Pending'}</p>
+                  </div>
+                  <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-gold">Sale window</p>
+                    <p className="mt-2 text-sm font-medium text-text/80">{saleWindow}</p>
+                  </div>
+                  <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-gold">Stock</p>
+                    <p className="mt-2 text-sm font-medium text-text/80">{product.stock} pieces</p>
+                  </div>
                 </div>
 
                 <Divider className="!my-8 !border-[#e8dcc4]" />
@@ -396,6 +440,44 @@ const ProductDetailPage = () => {
                     <Paragraph className="!mb-0 !mt-3 !text-[15px] !leading-8 !text-text/80">
                       {product.description || 'A refined maison piece designed to feel timeless, elegant, and effortlessly wearable.'}
                     </Paragraph>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.25em] text-gold">Price breakdown</p>
+                      <div className="mt-3 space-y-2 text-sm text-text/80">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Original price</span>
+                          <span>{formatMoney(product.originalPrice)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Current price</span>
+                          <span>{formatMoney(product.price)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 font-semibold text-gold">
+                          <span>You save</span>
+                          <span>{formatMoney(savedAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.25em] text-gold">Product facts</p>
+                      <div className="mt-3 space-y-2 text-sm text-text/80">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Rating</span>
+                          <span>{Number(product.rating || 0).toFixed(1)} / 5</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Reviews</span>
+                          <span>{Number(product.reviewCount || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Status</span>
+                          <span>{product.isActive === false ? 'Hidden' : 'Visible'}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {product.variants && product.variants.length > 0 ? (
@@ -466,18 +548,18 @@ const ProductDetailPage = () => {
                 <div className="mt-8 grid gap-3 sm:grid-cols-3">
                   <TrustBadge
                     icon={CheckCircleOutlined}
-                    title="Lifetime Warranty"
-                    description="Lifetime Warranty & Custom Sizing Available"
+                    title="Verified Listing"
+                    description="Product metadata, pricing, and availability are managed in the admin schema."
                   />
                   <TrustBadge
                     icon={SafetyCertificateOutlined}
-                    title="Certified Materials"
-                    description="100% Certified Ethical Gold & Stones"
+                    title="Sales Window"
+                    description="Price changes and sale dates are displayed directly from the backend."
                   />
                   <TrustBadge
                     icon={CarOutlined}
-                    title="Insured Shipping"
-                    description="Complimentary Secure Insured Shipping"
+                    title="Review Insights"
+                    description="Rating, review count, and featured status are surfaced for shoppers."
                   />
                 </div>
               </div>
@@ -499,6 +581,21 @@ const ProductDetailPage = () => {
             ) : (
               <Empty description="Product details will be added shortly." />
             )}
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-gold">Availability</p>
+                <p className="mt-2 text-sm leading-6 text-text/80">
+                  {product.stock > 0 ? `Ready to ship with ${product.stock} pieces in stock.` : 'Currently out of stock.'}
+                </p>
+              </div>
+              <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-gold">Created</p>
+                <p className="mt-2 text-sm leading-6 text-text/80">
+                  {product.createdAt ? new Date(product.createdAt).toLocaleString('en-IN') : 'Not available'}
+                </p>
+              </div>
+            </div>
           </SectionCard>
 
           <SectionCard title="Reviews" eyebrow="Social proof">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Rate, Tag, message } from 'antd';
-import { Heart, ShoppingBag, Eye, Trash2 } from 'lucide-react';
+import { Heart, ShoppingBag, Eye, Trash2, Sparkles, Flame } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
@@ -25,7 +25,12 @@ const ProductCard = ({
     discountPercentage = 0,
     image = 'https://via.placeholder.com/300',
     rating = 4.5,
+    reviewCount = 0,
     category = 'Jewelry',
+    stockQuantity = 0,
+    isFeatured = false,
+    saleStartDate = null,
+    saleEndDate = null,
   } = product || {};
 
   const resolvedOriginalPrice = Number(originalPrice || 0);
@@ -37,6 +42,12 @@ const ProductCard = ({
         : 0
     ),
   );
+  const isOnSale = resolvedDiscountPercentage > 0;
+  const isLowStock = Number(stockQuantity || 0) > 0 && Number(stockQuantity || 0) <= 5;
+
+  const saleWindowLabel = saleStartDate && saleEndDate
+    ? `${new Date(saleStartDate).toLocaleDateString('en-IN')} - ${new Date(saleEndDate).toLocaleDateString('en-IN')}`
+    : null;
 
   const handleAddToCart = (e) => {
     e.preventDefault(); // Prevent Link navigation
@@ -84,11 +95,18 @@ const ProductCard = ({
     <Link to={`/product/${id}`} className="group block h-full no-underline">
       <article className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-[#eadfca] bg-white shadow-[0_16px_36px_rgba(17,17,17,0.08)] transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_26px_54px_rgba(17,17,17,0.14)]">
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f3ede2]">
-          {resolvedDiscountPercentage > 0 ? (
-            <span className="absolute left-3 top-3 z-10 inline-flex items-center rounded-full bg-[#1f1f1f]/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white shadow-lg backdrop-blur-sm">
-              {resolvedDiscountPercentage}% Off
-            </span>
-          ) : null}
+          <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
+            {isOnSale ? (
+              <span className="inline-flex items-center rounded-full bg-[#1f1f1f]/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white shadow-lg backdrop-blur-sm">
+                {resolvedDiscountPercentage}% Off
+              </span>
+            ) : null}
+            {isFeatured ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#fff4e0] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#977132] shadow-sm">
+                <Sparkles className="h-3.5 w-3.5" /> Featured
+              </span>
+            ) : null}
+          </div>
 
           <img
             alt={name}
@@ -109,9 +127,16 @@ const ProductCard = ({
           ) : null}
 
           <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
-            <Tag color="gold" className="m-0 rounded-full border-[#e8d6b3] bg-[#fff7e8] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#977132]">
-              {category}
-            </Tag>
+            <div className="flex flex-col gap-2">
+              <Tag color="gold" className="m-0 w-fit rounded-full border-[#e8d6b3] bg-[#fff7e8] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#977132]">
+                {category}
+              </Tag>
+              {isLowStock ? (
+                <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[#fff5e5] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a56b1c] shadow-sm">
+                  <Flame className="h-3.5 w-3.5" /> Low stock
+                </span>
+              ) : null}
+            </div>
             <button
               type="button"
               onClick={handleAddToCart}
@@ -135,7 +160,17 @@ const ProductCard = ({
               ) : null}
               <p className="text-lg font-semibold text-[#c6a769]">{formatCurrency(resolvedPrice)}</p>
             </div>
-            <Rate disabled allowHalf value={Number(rating || 0)} style={{ fontSize: 13 }} />
+            <div className="text-right">
+              <Rate disabled allowHalf value={Number(rating || 0)} style={{ fontSize: 13 }} />
+              <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#8f8f8f]">
+                {Number(reviewCount || 0).toLocaleString('en-IN')} reviews
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8f8f8f]">
+            <span>{stockQuantity > 0 ? `${stockQuantity} in stock` : 'Sold out'}</span>
+            {saleWindowLabel ? <span className="rounded-full bg-[#f8f2e5] px-2 py-1 text-[#977132]">{saleWindowLabel}</span> : null}
           </div>
 
           <div className="mt-auto space-y-2">

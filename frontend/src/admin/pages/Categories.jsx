@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Space, Popconfirm, message, Typography } from 'antd';
+import { Table, Button, Modal, Form, Input, Space, Popconfirm, message, Typography, Card } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import AdminLayout from '../../layouts/AdminLayout';
 import { categoryService, adminService } from '../../services';
@@ -109,19 +109,32 @@ const AdminCategories = () => {
 
   return (
     <AdminLayout>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2} style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Categories</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-          Add Category
-        </Button>
-      </div>
+      <div className="space-y-6">
+        <div className="page-card bg-[radial-gradient(circle_at_top_right,rgba(198,167,105,0.18),transparent_28%),linear-gradient(135deg,#fffdf8_0%,#faf7f1_100%)] p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <p className="text-xs uppercase tracking-[0.35em] text-gold">Catalog taxonomy</p>
+              <Title level={2} className="!m-0 !font-display !text-luxury">Categories</Title>
+              <p className="max-w-2xl text-sm leading-7 text-muted">
+                Organize the storefront by collection groups so the shop filters and homepage sections stay coherent.
+              </p>
+            </div>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()} className="!h-12 !rounded-full !border-0 !bg-luxury !px-6 !font-semibold !text-white hover:!bg-gold">
+              Add Category
+            </Button>
+          </div>
+        </div>
 
-      <Table
-        columns={columns}
-        dataSource={categories}
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-      />
+        <Card className="page-card border-0 shadow-[0_18px_45px_rgba(17,17,17,0.06)]">
+          <Table
+            columns={columns}
+            dataSource={categories}
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+            className="admin-table"
+          />
+        </Card>
+      </div>
 
       <Modal
         title={editingCategory ? "Edit Category" : "Add Category"}

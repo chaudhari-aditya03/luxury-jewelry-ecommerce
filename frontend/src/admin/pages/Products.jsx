@@ -1,20 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Table, Button, Modal, Form, Input, InputNumber,
   Select, Upload, Space, Tag, Popconfirm, message,
-  Card, Row, Col, Typography
+  Card, Row, Col, Typography, Switch, Divider, DatePicker,
+  Empty
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  UploadOutlined, SearchOutlined
+  UploadOutlined, SearchOutlined, StarFilled,
+  PercentageOutlined, ThunderboltOutlined, AppstoreOutlined
 } from '@ant-design/icons';
 import AdminLayout from '../../layouts/AdminLayout';
-import { formatPrice, getImageUrl } from '../../utils/helpers';
+import { getImageUrl } from '../../utils/helpers';
 import { productService, categoryService, adminService } from '../../services';
+import dayjs from 'dayjs';
 
 const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+const { RangePicker } = DatePicker;
+
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+
+const computeDiscountPrice = (price, discountPercentage) => {
+  const numericPrice = Number(price || 0);
+  const numericDiscount = Number(discountPercentage || 0);
+
+  if (!numericPrice || !numericDiscount) {
+    return numericPrice || null;
+  }
+
+  return Math.max(0, Math.round(numericPrice - (numericPrice * numericDiscount) / 100));
+};
+
+const emptyVariant = {
+  variantName: '',
+  additionalPrice: 0,
+  stockQuantity: 0,
+};
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -31,6 +58,24 @@ const AdminProducts = () => {
     total: 0,
   });
 
+  const summaryCards = useMemo(() => ([
+    {
+      label: 'Fields the admin submits',
+      value: 'Product core, pricing, sale window, merchandising flags, variants, images',
+      icon: AppstoreOutlined,
+    },
+    {
+      label: 'Pricing truth',
+      value: 'Backend calculates discount_price from original price and discount %',
+      icon: PercentageOutlined,
+    },
+    {
+      label: 'Merchandising',
+      value: 'Featured, active, stock, sale, and image gallery are all editable here',
+      icon: ThunderboltOutlined,
+    },
+  ]), []);
+
   useEffect(() => {
     fetchProducts(pagination.current - 1, pagination.pageSize);
     fetchCategories();
@@ -46,16 +91,26 @@ const AdminProducts = () => {
         key: product.id,
         id: product.id,
         name: product.name,
+        sku: product.sku,
         price: product.price,
+        originalPrice: product.originalPrice,
         discountPrice: product.discountPrice,
+        discountPercentage: product.discountPercentage,
         category: product.categoryName,
         categoryId: product.categoryId,
         stock: product.stockQuantity,
         description: product.description,
+        isFeatured: product.isFeatured,
+        isActive: product.isActive,
+        saleStartDate: product.saleStartDate,
+        saleEndDate: product.saleEndDate,
+        averageRating: product.averageRating,
+        reviewCount: product.reviewCount,
         image: product.images && product.images.length > 0 
           ? product.images.find(img => img.isPrimary)?.imageUrl || product.images[0].imageUrl
           : '',
         images: product.images?.map(img => img.imageUrl) || [],
+        variants: product.variants || [],
       }));
 
       setProducts(formattedProducts);
@@ -83,13 +138,24 @@ const AdminProducts = () => {
   const showModal = (product = null) => {
     setEditingProduct(product);
     if (product) {
+      const saleDates = product.saleStartDate && product.saleEndDate
+        ? [dayjs(product.saleStartDate), dayjs(product.saleEndDate)]
+        : [];
+
       form.setFieldsValue({
         name: product.name,
+        sku: product.sku,
         price: product.price,
+        originalPrice: product.originalPrice,
+        discountPercentage: product.discountPercentage,
         discountPrice: product.discountPrice,
         categoryId: product.categoryId,
-        stock: product.stock,
+        stockQuantity: product.stock,
         description: product.description,
+        isFeatured: product.isFeatured,
+        isActive: product.isActive ?? true,
+        saleWindow: saleDates,
+        variants: product.variants && product.variants.length > 0 ? product.variants : [emptyVariant],
       });
       setFileList(
         product.images?.map((url, index) => ({
@@ -101,6 +167,11 @@ const AdminProducts = () => {
       );
     } else {
       form.resetFields();
+      form.setFieldsValue({
+        isFeatured: false,
+        isActive: true,
+        variants: [emptyVariant],
+      });
       setFileList([]);
     }
     setIsModalVisible(true);
@@ -138,14 +209,32 @@ const AdminProducts = () => {
         }
       }
 
+      const saleWindow = values.saleWindow || [];
+      const discountPrice = values.discountPrice ?? computeDiscountPrice(values.originalPrice || values.price, values.discountPercentage);
+      const variants = (values.variants || [])
+        .filter(variant => variant && variant.variantName)
+        .map(variant => ({
+          variantName: variant.variantName,
+          additionalPrice: Number(variant.additionalPrice || 0),
+          stockQuantity: Number(variant.stockQuantity || 0),
+        }));
+
       const productData = {
         name: values.name,
+        sku: values.sku || undefined,
         description: values.description || '',
         price: values.price,
-        discountPrice: values.discountPrice || values.price,
-        stockQuantity: values.stock,
+        originalPrice: values.originalPrice || values.price,
+        discountPercentage: values.discountPercentage || null,
+        discountPrice: discountPrice || null,
+        saleStartDate: saleWindow[0] ? saleWindow[0].toISOString() : null,
+        saleEndDate: saleWindow[1] ? saleWindow[1].toISOString() : null,
+        stockQuantity: values.stockQuantity,
         categoryId: values.categoryId,
+        isFeatured: values.isFeatured || false,
+        isActive: values.isActive ?? true,
         imageUrls: imageUrls,
+        variants,
       };
 
       if (editingProduct) {
@@ -195,7 +284,12 @@ const AdminProducts = () => {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: text => <span style={{ fontWeight: 500 }}>{text}</span>,
+      render: (text, record) => (
+        <div className="space-y-1">
+          <div className="font-semibold text-luxury">{text}</div>
+          <div className="text-xs uppercase tracking-[0.2em] text-muted">{record.sku || 'SKU pending'}</div>
+        </div>
+      ),
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
           <Input
@@ -222,19 +316,34 @@ const AdminProducts = () => {
       title: 'Category',
       dataIndex: 'category',
       key: 'category',
-      filters: [
-        { text: 'Rings', value: 'Rings' },
-        { text: 'Necklaces', value: 'Necklaces' },
-        { text: 'Earrings', value: 'Earrings' },
-      ],
-      onFilter: (value, record) => record.category.indexOf(value) === 0,
+      render: category => <Tag color="gold" className="m-0 rounded-full border-0 px-3 py-1">{category}</Tag>,
     },
     {
       title: 'Price',
       dataIndex: 'price',
       key: 'price',
-      render: price => formatPrice(price),
+      render: (price, record) => (
+        <div className="space-y-1">
+          <div className="font-semibold text-luxury">{currencyFormatter.format(Number(record.discountPrice || price || 0))}</div>
+          {Number(record.originalPrice || price || 0) > Number(record.discountPrice || price || 0) ? (
+            <div className="text-xs text-muted line-through">{currencyFormatter.format(Number(record.originalPrice || price || 0))}</div>
+          ) : null}
+        </div>
+      ),
       sorter: (a, b) => a.price - b.price,
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_, record) => (
+        <Space size={6} wrap>
+          <Tag color={record.isActive ? 'green' : 'red'} className="m-0 rounded-full border-0 px-3 py-1">
+            {record.isActive ? 'Active' : 'Inactive'}
+          </Tag>
+          {record.isFeatured ? <Tag color="gold" className="m-0 rounded-full border-0 px-3 py-1"><StarFilled /> Featured</Tag> : null}
+          {Number(record.discountPercentage || 0) > 0 ? <Tag color="orange" className="m-0 rounded-full border-0 px-3 py-1"><PercentageOutlined /> Sale</Tag> : null}
+        </Space>
+      ),
     },
     {
       title: 'Stock',
@@ -262,98 +371,257 @@ const AdminProducts = () => {
 
   return (
     <AdminLayout>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2} style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>Products</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()} size="large">
-          Add Product
-        </Button>
+      <div className="space-y-6">
+        <div className="page-card bg-[radial-gradient(circle_at_top_right,rgba(198,167,105,0.18),transparent_28%),linear-gradient(135deg,#fffdf8_0%,#faf7f1_100%)] p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <p className="text-xs uppercase tracking-[0.35em] text-gold">Catalog studio</p>
+              <Title level={2} className="!m-0 !font-display !text-luxury">Products</Title>
+              <p className="max-w-2xl text-sm leading-7 text-muted">
+                The admin form now mirrors the product schema: core details, pricing, sale window, flags, variants, and gallery images.
+              </p>
+            </div>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()} size="large" className="!h-12 !rounded-full !border-0 !bg-luxury !px-6 !font-semibold !text-white hover:!bg-gold">
+              Add Product
+            </Button>
+          </div>
+
+          <Row gutter={[16, 16]} className="mt-6">
+            {summaryCards.map(({ label, value, icon: Icon }) => (
+              <Col xs={24} md={8} key={label}>
+                <Card className="page-card h-full border-0 shadow-none">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-gold">
+                      <Icon />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-luxury">{label}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted">{value}</p>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
+
+        <Card className="page-card overflow-hidden border-0 shadow-[0_18px_45px_rgba(17,17,17,0.06)]">
+          <Table
+            columns={columns}
+            dataSource={products}
+            loading={loading}
+            pagination={{
+              ...pagination,
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} products`,
+            }}
+            onChange={handleTableChange}
+            rowSelection={{ type: 'checkbox' }}
+            className="admin-table"
+          />
+        </Card>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={products}
-        loading={loading}
-        pagination={{
-          ...pagination,
-          showSizeChanger: true,
-          showTotal: (total) => `Total ${total} products`,
-        }}
-        onChange={handleTableChange}
-        rowSelection={{ type: 'checkbox' }}
-      />
-
       <Modal
-        title={editingProduct ? "Edit Product" : "Add Product"}
+        title={editingProduct ? 'Edit Product' : 'Add Product'}
         open={isModalVisible}
         onOk={handleOk}
         onCancel={() => setIsModalVisible(false)}
-        width={800}
+        width={1100}
         confirmLoading={loading}
+        className="admin-product-modal"
+        centered
       >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={16}>
-              <Form.Item name="name" label="Product Name" rules={[{ required: true }]}>
-                <Input placeholder="Enter product name" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="categoryId" label="Category" rules={[{ required: true }]}>
-                <Select placeholder="Select category">
-                  {categories.map(cat => (
-                    <Option key={cat.id} value={cat.id}>{cat.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+        <div className="space-y-6">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-3xl border border-[#eadfca] bg-[#fffaf1] p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold">Product data</p>
+              <p className="mt-2 text-sm leading-6 text-muted">Enter the fields the customer sees on cards and the detail page.</p>
+            </div>
+            <div className="rounded-3xl border border-[#eadfca] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold">Pricing</p>
+              <p className="mt-2 text-sm leading-6 text-muted">Original price, sale price, and discount percentage stay in sync.</p>
+            </div>
+            <div className="rounded-3xl border border-[#eadfca] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold">Merchandising</p>
+              <p className="mt-2 text-sm leading-6 text-muted">Flags like featured, active, and scheduled sale control visibility.</p>
+            </div>
+          </div>
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="price" label="Price" rules={[{ required: true }]}>
-                <InputNumber
-                  style={{ width: '100%' }}
-                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value.replace(/\₹\s?|(,*)/g, '')}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="discountPrice" label="Discount Price">
-                <InputNumber
-                  style={{ width: '100%' }}
-                  formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value.replace(/\₹\s?|(,*)/g, '')}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="stock" label="Stock Quantity" rules={[{ required: true }]}>
-                <InputNumber style={{ width: '100%' }} min={0} />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form form={form} layout="vertical" className="space-y-6">
+            <Row gutter={16}>
+              <Col xs={24} lg={16}>
+                <Form.Item name="name" label="Product Name" rules={[{ required: true, message: 'Product name is required' }]}>
+                  <Input placeholder="Enter product name" className="input-base" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Form.Item name="sku" label="SKU">
+                  <Input placeholder="JW-XXXXXXX" className="input-base" />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Form.Item name="description" label="Description">
-            <TextArea rows={4} />
-          </Form.Item>
+            <Row gutter={16}>
+              <Col xs={24} lg={8}>
+                <Form.Item name="categoryId" label="Category" rules={[{ required: true, message: 'Category is required' }]}>
+                  <Select placeholder="Select category" className="input-base">
+                    {categories.map(cat => (
+                      <Option key={cat.id} value={cat.id}>{cat.name}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Form.Item name="price" label="Current Price" rules={[{ required: true, message: 'Price is required' }]}>
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    min={0}
+                    placeholder="0"
+                    formatter={value => `₹ ${String(value || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}
+                    parser={value => value.replace(/\₹\s?|(,*)/g, '')}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Form.Item name="originalPrice" label="Original Price">
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    min={0}
+                    placeholder="0"
+                    formatter={value => `₹ ${String(value || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}
+                    parser={value => value.replace(/\₹\s?|(,*)/g, '')}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Form.Item label="Product Images">
-            <Upload
-              listType="picture-card"
-              fileList={fileList}
-              onChange={handleUploadChange}
-              beforeUpload={() => false}
-            >
-              {fileList.length < 4 && (
-                <div>
-                  <UploadOutlined />
-                  <div style={{ marginTop: 8 }}>Upload</div>
+            <Row gutter={16}>
+              <Col xs={24} lg={8}>
+                <Form.Item name="discountPercentage" label="Discount %">
+                  <InputNumber style={{ width: '100%' }} min={0} max={90} placeholder="0" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Form.Item name="discountPrice" label="Discount Price">
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    min={0}
+                    placeholder="Auto-calculated if empty"
+                    formatter={value => `₹ ${String(value || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}
+                    parser={value => value.replace(/\₹\s?|(,*)/g, '')}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Form.Item name="stockQuantity" label="Stock Quantity" rules={[{ required: true, message: 'Stock quantity is required' }]}>
+                  <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col xs={24} lg={12}>
+                <Form.Item name="saleWindow" label="Sale Window">
+                  <RangePicker showTime className="w-full" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={6}>
+                <Form.Item name="isActive" label="Active" valuePropName="checked" initialValue>
+                  <Switch checkedChildren="Visible" unCheckedChildren="Hidden" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={6}>
+                <Form.Item name="isFeatured" label="Featured" valuePropName="checked">
+                  <Switch checkedChildren="Featured" unCheckedChildren="Regular" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item name="description" label="Description">
+              <TextArea rows={5} placeholder="Describe the material, finish, inspiration, and styling details" />
+            </Form.Item>
+
+            <Divider />
+
+            <Form.List name="variants">
+              {(fields, { add, remove }) => (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-luxury">Product Variants</p>
+                      <p className="text-sm text-muted">Add ring sizes, metal colors, or other purchasable variations.</p>
+                    </div>
+                    <Button onClick={() => add(emptyVariant)} icon={<PlusOutlined />} className="!rounded-full">
+                      Add Variant
+                    </Button>
+                  </div>
+
+                  {fields.length > 0 ? fields.map(({ key, name, ...restField }) => (
+                    <Card key={key} className="border-[#eadfca] bg-background/80 shadow-none">
+                      <Row gutter={16} align="middle">
+                        <Col xs={24} md={10}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'variantName']}
+                            label="Variant Name"
+                            rules={[{ required: true, message: 'Variant name is required' }]}
+                          >
+                            <Input placeholder="18K Yellow Gold" />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={12} md={6}>
+                          <Form.Item {...restField} name={[name, 'additionalPrice']} label="Additional Price">
+                            <InputNumber style={{ width: '100%' }} min={0} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={12} md={6}>
+                          <Form.Item {...restField} name={[name, 'stockQuantity']} label="Stock">
+                            <InputNumber style={{ width: '100%' }} min={0} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={2}>
+                          <Button danger onClick={() => remove(name)} className="mt-2 w-full md:mt-8">
+                            Remove
+                          </Button>
+                        </Col>
+                      </Row>
+                    </Card>
+                  )) : <Empty description="No variants added yet" />}
                 </div>
               )}
-            </Upload>
-          </Form.Item>
-        </Form>
+            </Form.List>
+
+            <Divider />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-luxury">Gallery Images</p>
+                  <p className="text-sm text-muted">Upload up to four images. The first image becomes the main image by convention.</p>
+                </div>
+                <div className="rounded-full bg-background px-4 py-2 text-xs uppercase tracking-[0.22em] text-muted">
+                  {fileList.length}/4
+                </div>
+              </div>
+
+              <Upload
+                listType="picture-card"
+                fileList={fileList}
+                onChange={handleUploadChange}
+                beforeUpload={() => false}
+                className="gallery-upload"
+              >
+                {fileList.length < 4 && (
+                  <div>
+                    <UploadOutlined />
+                    <div style={{ marginTop: 8 }}>Upload</div>
+                  </div>
+                )}
+              </Upload>
+            </div>
+          </Form>
+        </div>
       </Modal>
     </AdminLayout>
   );

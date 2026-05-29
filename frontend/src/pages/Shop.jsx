@@ -76,19 +76,31 @@ const ShopPage = () => {
       const pageData = response.data?.data;
       const content = pageData?.content || [];
 
-      setProducts(content.map((product) => ({
+      const mappedProducts = content.map((product) => ({
         id: product.id,
         name: product.name,
         price: Number(product.discountPrice ?? product.price ?? 0),
-        originalPrice: Number(product.discountPrice ? product.price : 0),
+        originalPrice: Number(product.price ?? 0),
         discountPercentage:
           product.discountPrice && Number(product.price || 0) > Number(product.discountPrice || 0)
             ? Math.round(((Number(product.price) - Number(product.discountPrice)) / Number(product.price)) * 100)
             : 0,
         rating: product.averageRating ?? 0,
+        reviewCount: product.reviewCount ?? 0,
         category: product.categoryName || 'Jewelry',
+        stockQuantity: product.stockQuantity ?? 0,
+        isFeatured: product.isFeatured ?? false,
+        saleStartDate: product.saleStartDate,
+        saleEndDate: product.saleEndDate,
+        isActive: product.isActive,
         image: getImageUrl(product.images?.find((img) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl),
-      })));
+      }));
+
+      setProducts(
+        filters.rating > 0
+          ? mappedProducts.filter((product) => Number(product.rating || 0) >= Number(filters.rating))
+          : mappedProducts,
+      );
       setTotalItems(pageData?.totalElements ?? 0);
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -130,9 +142,9 @@ const ShopPage = () => {
   };
 
   const FilterContent = () => (
-    <div className="shop-filter-content">
-      <div className="shop-filter-section">
-        <Title level={5} className="shop-filter-title">Categories</Title>
+    <div className="space-y-6">
+      <div className="rounded-[1.6rem] border border-[#eadfca] bg-white p-5 shadow-[0_14px_36px_rgba(17,17,17,0.05)]">
+        <Title level={5} className="!mb-4 !font-display !text-luxury">Categories</Title>
         <Checkbox.Group
           options={categories}
           value={filters.category}
@@ -141,8 +153,8 @@ const ShopPage = () => {
         />
       </div>
 
-      <div className="shop-filter-section">
-        <Title level={5} className="shop-filter-title">Price Range</Title>
+      <div className="rounded-[1.6rem] border border-[#eadfca] bg-white p-5 shadow-[0_14px_36px_rgba(17,17,17,0.05)]">
+        <Title level={5} className="!mb-4 !font-display !text-luxury">Price Range</Title>
         <Slider
           range
           min={0}
@@ -158,8 +170,8 @@ const ShopPage = () => {
         </div>
       </div>
 
-      <div className="shop-filter-section">
-        <Title level={5} className="shop-filter-title">Rating</Title>
+      <div className="rounded-[1.6rem] border border-[#eadfca] bg-white p-5 shadow-[0_14px_36px_rgba(17,17,17,0.05)]">
+        <Title level={5} className="!mb-4 !font-display !text-luxury">Rating</Title>
         <Radio.Group
           onChange={e => handleFilterChange('rating', e.target.value)}
           value={filters.rating}
@@ -174,7 +186,7 @@ const ShopPage = () => {
 
       <Button
         block
-        className="shop-clear-btn"
+        className="!h-12 !rounded-full !border-[#e8dcc4] !bg-background !font-semibold !text-luxury hover:!border-gold hover:!text-gold"
         onClick={() => setFilters({ search: '', category: [], priceRange: [0, 1000000], rating: 0, sortBy: 'newest' })}
       >
         Clear Filters
@@ -188,29 +200,31 @@ const ShopPage = () => {
         <div className="shop-shell">
           <Breadcrumb items={[{ title: 'Home', href: '/' }, { title: 'Shop' }]} className="shop-breadcrumb" />
 
-          <div className="shop-hero">
-            <div className="shop-hero-content">
-              <p className="shop-hero-eyebrow">Curated Collection</p>
-              <Title level={2} className="shop-hero-title">Shop Collection</Title>
-              <p className="shop-hero-subtitle">
-                Discover handcrafted jewellery designed for elegance and timeless beauty.
-              </p>
-            </div>
-            <div className="shop-hero-actions">
-              <Search
-                allowClear
-                enterButton={<SearchOutlined />}
-                placeholder="Search rings, necklaces, earrings..."
-                className="shop-search"
-                onSearch={(value) => handleFilterChange('search', value.trim())}
-              />
-              <Button
-                icon={<FilterOutlined />}
-                className="shop-mobile-filter-btn md:hidden"
-                onClick={() => setMobileFilterVisible(true)}
-              >
-                Filters
-              </Button>
+          <div className="overflow-hidden rounded-[2.2rem] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(198,167,105,0.18),transparent_30%),linear-gradient(135deg,#fffdf8_0%,#faf6ef_100%)] p-6 shadow-[0_20px_60px_rgba(17,17,17,0.08)] md:p-8">
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-[0.35em] text-gold">Curated collection</p>
+                <Title level={2} className="!m-0 !font-display !text-luxury">Shop Collection</Title>
+                <p className="max-w-2xl text-sm leading-7 text-muted">
+                  Discover handcrafted jewellery designed for elegant gifting, daily wear, and statement moments.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+                <Search
+                  allowClear
+                  enterButton={<SearchOutlined />}
+                  placeholder="Search rings, necklaces, earrings..."
+                  className="shop-search"
+                  onSearch={(value) => handleFilterChange('search', value.trim())}
+                />
+                <Button
+                  icon={<FilterOutlined />}
+                  className="!h-12 !rounded-full !border-[#e8dcc4] !bg-white !px-5 !font-semibold !text-luxury md:hidden"
+                  onClick={() => setMobileFilterVisible(true)}
+                >
+                  Filters
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -224,7 +238,7 @@ const ShopPage = () => {
             </Sider>
 
             <Content className="shop-content">
-              <Card className="shop-toolbar" styles={{ body: { padding: '14px 20px' } }}>
+              <Card className="shop-toolbar border-0 shadow-[0_14px_36px_rgba(17,17,17,0.05)]" styles={{ body: { padding: '14px 20px' } }}>
                 <Row justify="space-between" align="middle" gutter={[16, 16]}>
                   <Col xs={24} sm={12}>
                     <Text className="shop-product-count">{totalItems} Products Found</Text>
