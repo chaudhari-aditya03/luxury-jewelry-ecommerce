@@ -6,6 +6,7 @@ import com.jewelryshop.exception.BadRequestException;
 import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.*;
 import com.jewelryshop.service.ProductService;
+import com.jewelryshop.service.ProductPricingService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductImageRepository productImageRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ReviewRepository reviewRepository;
+    private final ProductPricingService productPricingService;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -48,7 +50,11 @@ public class ProductServiceImpl implements ProductService {
         product.setSku(request.getSku() != null ? request.getSku() : generateSku());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
+        product.setOriginalPrice(request.getOriginalPrice() != null ? request.getOriginalPrice() : request.getPrice());
         product.setDiscountPrice(request.getDiscountPrice());
+        product.setDiscountPercentage(request.getDiscountPercentage());
+        product.setSaleStartDate(request.getSaleStartDate());
+        product.setSaleEndDate(request.getSaleEndDate());
         product.setStockQuantity(request.getStockQuantity());
         product.setCategory(category);
         product.setIsActive(request.getIsActive());
@@ -133,7 +139,11 @@ public class ProductServiceImpl implements ProductService {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
+        product.setOriginalPrice(request.getOriginalPrice() != null ? request.getOriginalPrice() : request.getPrice());
         product.setDiscountPrice(request.getDiscountPrice());
+        product.setDiscountPercentage(request.getDiscountPercentage());
+        product.setSaleStartDate(request.getSaleStartDate());
+        product.setSaleEndDate(request.getSaleEndDate());
         product.setStockQuantity(request.getStockQuantity());
         product.setCategory(category);
         product.setIsActive(request.getIsActive());
@@ -313,7 +323,11 @@ public class ProductServiceImpl implements ProductService {
         response.setSku(product.getSku());
         response.setDescription(product.getDescription());
         response.setPrice(product.getPrice());
+        response.setOriginalPrice(product.getOriginalPrice());
+        response.setDiscountPercentage(product.getDiscountPercentage());
         response.setDiscountPrice(product.getDiscountPrice());
+        response.setSaleStartDate(product.getSaleStartDate());
+        response.setSaleEndDate(product.getSaleEndDate());
         response.setStockQuantity(product.getStockQuantity());
         response.setCategoryId(product.getCategory().getId());
         response.setCategoryName(product.getCategory().getName());
@@ -345,6 +359,41 @@ public class ProductServiceImpl implements ProductService {
         response.setReviewCount(reviewCount);
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse updateProductDiscount(Long id, ProductDiscountRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        product.setOriginalPrice(request.getOriginalPrice());
+        product.setDiscountPercentage(request.getDiscountPercentage());
+        product.setSaleStartDate(request.getSaleStartDate());
+        product.setSaleEndDate(request.getSaleEndDate());
+        product.setDiscountPrice(productPricingService.calculateDiscountPrice(request.getOriginalPrice(), request.getDiscountPercentage()));
+        productRepository.save(product);
+        return getProductById(id);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse removeProductDiscount(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        product.setDiscountPercentage(null);
+        product.setDiscountPrice(null);
+        product.setSaleStartDate(null);
+        product.setSaleEndDate(null);
+        productRepository.save(product);
+        return getProductById(id);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse scheduleProductSale(Long id, ProductDiscountRequest request) {
+        return updateProductDiscount(id, request);
     }
 
     private String generateSku() {

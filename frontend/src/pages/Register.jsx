@@ -19,9 +19,9 @@ const RegisterPage = () => {
         password: values.password,
         phone: values.phone,
       };
-      await registerUser(payload);
-      message.success('Account created! Welcome to LuxeJewels.');
-      navigate('/shop');
+      const verificationData = await registerUser(payload);
+      message.success('Account created. Please verify your email to continue.');
+      navigate(`/verify-email?email=${encodeURIComponent(verificationData?.email || values.email)}`);
     } catch (error) {
       const apiMessage = error?.response?.data?.message;
       const details = error?.response?.data?.error;

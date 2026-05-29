@@ -1,6 +1,7 @@
 package com.jewelryshop.controller;
 
 import com.jewelryshop.dto.ApiResponse;
+import com.jewelryshop.dto.ProductDiscountRequest;
 import com.jewelryshop.dto.ProductRequest;
 import com.jewelryshop.dto.ProductResponse;
 import com.jewelryshop.service.ProductService;
@@ -119,6 +120,34 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
+    }
+
+    @PutMapping("/admin/products/{id}/discount")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update product discount (Admin)")
+    public ResponseEntity<ApiResponse<ProductResponse>> updateDiscount(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductDiscountRequest request) {
+        ProductResponse product = productService.updateProductDiscount(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Discount updated successfully", product));
+    }
+
+    @DeleteMapping("/admin/products/{id}/discount")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Remove product discount (Admin)")
+    public ResponseEntity<ApiResponse<ProductResponse>> removeDiscount(@PathVariable Long id) {
+        ProductResponse product = productService.removeProductDiscount(id);
+        return ResponseEntity.ok(ApiResponse.success("Discount removed successfully", product));
+    }
+
+    @PostMapping("/admin/products/{id}/schedule-sale")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Schedule product sale (Admin)")
+    public ResponseEntity<ApiResponse<ProductResponse>> scheduleSale(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductDiscountRequest request) {
+        ProductResponse product = productService.scheduleProductSale(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Sale scheduled successfully", product));
     }
 
     @PostMapping("/admin/upload-image")

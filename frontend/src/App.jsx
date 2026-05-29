@@ -15,6 +15,8 @@ import AboutPage from './pages/About';
 import ContactPage from './pages/Contact';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
+import VerifyEmailPage from './pages/VerifyEmail';
+import EmailVerificationRequiredPage from './pages/EmailVerificationRequiredPage';
 import ForgotPasswordPage from './pages/ForgotPassword';
 import ResetPasswordPage from './pages/ResetPassword';
 import ShopPage from './pages/Shop';
@@ -35,6 +37,7 @@ import AdminAnalytics from './admin/pages/Analytics';
 import AdminPayments from './admin/pages/Payments';
 import AdminProfile from './admin/pages/Profile';
 import AdminSettings from './admin/pages/Settings';
+import AdminDiscountManagement from './admin/pages/AdminDiscountManagement';
 
 // Error Pages
 const NotFoundPage = () => (
@@ -64,6 +67,8 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/verify-email-required" element={<EmailVerificationRequiredPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/shop" element={<ShopPage />} />
@@ -185,6 +190,14 @@ function App() {
                 element={
                   <AdminRoute>
                     <AdminSettings />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/discounts"
+                element={
+                  <AdminRoute>
+                    <AdminDiscountManagement />
                   </AdminRoute>
                 }
               />

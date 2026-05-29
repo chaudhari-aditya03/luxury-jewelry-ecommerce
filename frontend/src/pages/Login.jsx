@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Checkbox, message } from 'antd';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Sparkles, Chrome } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { authService } from '../services';
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
-  const { login, isAdmin } = useAuth();
+  const { login, isAdmin, completeExternalLogin, setPendingVerificationEmail } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const oauth2 = searchParams.get('oauth2');
+    if (token && oauth2) {
+      const hydrateOauthLogin = async () => {
+        try {
+          setLoading(true);
+          await completeExternalLogin(token);
+          message.success('Google login successful');
+          navigate('/shop', { replace: true });
+        } catch (error) {
+          message.error('Google login failed. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void hydrateOauthLogin();
+    }
+  }, [searchParams, completeExternalLogin, navigate]);
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -26,6 +49,9 @@ const LoginPage = () => {
       const apiMessage = error?.response?.data?.message;
       if (!error?.response) {
         message.error('Cannot connect to server. Please check your connection.');
+      } else if (apiMessage?.toLowerCase().includes('verify your email')) {
+        setPendingVerificationEmail(values.email);
+        navigate(`/verify-email-required?email=${encodeURIComponent(values.email)}`);
       } else if (status === 401) {
         message.error(apiMessage || 'Invalid email or password.');
       } else {
@@ -128,6 +154,19 @@ const LoginPage = () => {
                 Sign In
               </Button>
             </Form.Item>
+
+            <div className="mb-5">
+              <Button
+                block
+                className="!h-12 !rounded-full !border-[#d9d0c1] !bg-white !text-charcoal-700"
+                onClick={() => window.location.assign(authService.getGoogleLoginUrl())}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Chrome className="h-4 w-4" />
+                  Continue with Google
+                </span>
+              </Button>
+            </div>
           </Form>
 
           <div className="mt-6 text-center">

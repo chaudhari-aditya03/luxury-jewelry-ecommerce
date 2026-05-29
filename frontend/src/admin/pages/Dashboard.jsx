@@ -15,6 +15,9 @@ const AdminDashboard = () => {
     totalOrders: 0,
     totalUsers: 0,
     totalProducts: 0,
+    productsOnSale: 0,
+    averageDiscount: 0,
+    revenueSaved: 0,
   });
   const [monthlySales, setMonthlySales] = useState([]);
 
@@ -35,6 +38,9 @@ const AdminDashboard = () => {
           totalOrders: summaryData?.totalOrders ?? 0,
           totalUsers: summaryData?.totalUsers ?? 0,
           totalProducts: summaryData?.totalProducts ?? 0,
+          productsOnSale: summaryData?.productsOnSale ?? 0,
+          averageDiscount: Number(summaryData?.averageDiscount ?? 0),
+          revenueSaved: Number(summaryData?.revenueSaved ?? 0),
         });
 
         setMonthlySales(monthlyData.map((item) => ({
@@ -92,6 +98,36 @@ const AdminDashboard = () => {
       textColor: '#9f1239',
       bg: 'linear-gradient(135deg, #fff1f2, #ffe4e6)',
     },
+    {
+      title: 'Products On Sale',
+      value: summary.productsOnSale.toLocaleString(),
+      icon: '🏷️',
+      change: 'Live',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+      textColor: '#075985',
+      bg: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+    },
+    {
+      title: 'Average Discount',
+      value: `${Number(summary.averageDiscount || 0).toFixed(0)}%`,
+      icon: '📉',
+      change: 'Current',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #14b8a6, #0f766e)',
+      textColor: '#115e59',
+      bg: 'linear-gradient(135deg, #f0fdfa, #ccfbf1)',
+    },
+    {
+      title: 'Revenue Saved',
+      value: formatPrice(summary.revenueSaved),
+      icon: '💹',
+      change: 'From discounts',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+      textColor: '#92400e',
+      bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+    },
   ];
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -115,6 +151,7 @@ const AdminDashboard = () => {
     { label: 'View All Orders', href: '/admin/orders', icon: '📦', desc: 'Process & track orders' },
     { label: 'User Management', href: '/admin/users', icon: '👥', desc: 'View & manage users' },
     { label: 'Categories', href: '/admin/categories', icon: '🗂️', desc: 'Manage product categories' },
+    { label: 'Discounts', href: '/admin/discounts', icon: '🏷️', desc: 'Create and schedule sales' },
   ];
 
   return (

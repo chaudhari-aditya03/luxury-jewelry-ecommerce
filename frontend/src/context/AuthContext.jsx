@@ -7,23 +7,44 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
 
-  // Auto-login on mount
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('authUser');
+    const pendingEmail = localStorage.getItem('pendingVerificationEmail') || '';
+    setPendingVerificationEmail(pendingEmail);
 
-    if (token && savedUser) {
+    const hydrateUser = async () => {
+      if (!token || !savedUser) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        const response = await authService.getCurrentUser();
+        const currentUser = response.data?.data || parsedUser;
+        setUser(currentUser);
+
+        if (currentUser?.emailVerified === false && currentUser?.email) {
+          setPendingVerificationEmail(currentUser.email);
+          localStorage.setItem('pendingVerificationEmail', currentUser.email);
+        }
       } catch (err) {
-        console.error('Failed to parse saved user:', err);
+        console.error('Failed to validate saved auth session:', err);
         localStorage.removeItem('authToken');
         localStorage.removeItem('authUser');
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
-    setIsLoading(false);
+    if (token && savedUser) {
+      void hydrateUser();
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   const login = async (email, password) => {
@@ -52,13 +73,11 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       setError(null);
       const response = await authService.register(userData);
-      const authData = response.data.data; // Backend returns { success, message, data }
-
-      localStorage.setItem('authToken', authData.token);
-      localStorage.setItem('authUser', JSON.stringify(authData.user));
-      setUser(authData.user);
-
-      return authData;
+      const verificationData = response.data.data;
+      const email = verificationData?.email || userData.email;
+      setPendingVerificationEmail(email);
+      localStorage.setItem('pendingVerificationEmail', email);
+      return verificationData;
     } catch (err) {
       const message = err.response?.data?.message || 'Registration failed';
       setError(message);
@@ -68,25 +87,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const completeExternalLogin = async (token) => {
+    try {
+      localStorage.setItem('authToken', token);
+      const response = await authService.getCurrentUser();
+      const currentUser = response.data?.data;
+      if (currentUser) {
+        localStorage.setItem('authUser', JSON.stringify(currentUser));
+        setUser(currentUser);
+        if (currentUser.emailVerified === false && currentUser.email) {
+          setPendingVerificationEmail(currentUser.email);
+          localStorage.setItem('pendingVerificationEmail', currentUser.email);
+        }
+      }
+      return currentUser;
+    } catch (err) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+      throw err;
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
     setError(null);
+    setPendingVerificationEmail('');
   };
 
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'admin';
+  const needsVerification = user?.emailVerified === false;
 
   const value = {
     user,
     isAuthenticated,
     isAdmin,
+    needsVerification,
+    pendingVerificationEmail,
     isLoading,
     error,
     login,
     register,
+    completeExternalLogin,
     logout,
     setError,
+    setPendingVerificationEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

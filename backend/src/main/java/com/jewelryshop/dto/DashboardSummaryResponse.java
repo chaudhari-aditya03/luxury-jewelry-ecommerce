@@ -16,4 +16,7 @@ public class DashboardSummaryResponse {
     private BigDecimal totalRevenue;
     private Long totalProducts;
     private Long lowStockProducts;
+    private Long productsOnSale;
+    private BigDecimal averageDiscount;
+    private BigDecimal revenueSaved;
 }

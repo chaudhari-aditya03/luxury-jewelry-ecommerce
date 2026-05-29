@@ -16,13 +16,25 @@ const ResetPasswordPage = () => {
   useEffect(() => {
     if (!token) {
       setTokenValid(false);
+      return;
     }
+
+    const validateToken = async () => {
+      try {
+        await authService.validateResetToken(token);
+        setTokenValid(true);
+      } catch (error) {
+        setTokenValid(false);
+      }
+    };
+
+    void validateToken();
   }, [token]);
 
-  const onFinish = async ({ newPassword }) => {
+  const onFinish = async ({ newPassword, confirmPassword }) => {
     setLoading(true);
     try {
-      await authService.resetPassword(token, newPassword);
+      await authService.resetPassword(token, newPassword, confirmPassword);
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
@@ -161,8 +173,8 @@ const ResetPasswordPage = () => {
 
                 <div className="mb-5 rounded-[1.25rem] border border-[#eadfca] bg-[#faf8f1] p-4 text-xs leading-6 text-muted">
                   <p className="mb-2 font-medium text-charcoal-700">Password requirements:</p>
-                  <p>Minimum 6 characters</p>
-                  <p>Mix of letters and numbers recommended</p>
+                  <p>Minimum 8 characters</p>
+                  <p>Use a strong mix of letters, numbers, and symbols</p>
                 </div>
 
                 <Form.Item className="mb-0">

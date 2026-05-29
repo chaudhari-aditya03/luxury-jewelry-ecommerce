@@ -34,6 +34,15 @@ public class User {
     @Column(length = 15)
     private String phone;
 
+    @Column(length = 30)
+    private String provider;
+
+    @Column(name = "provider_id")
+    private String providerId;
+
+    @Column(name = "profile_picture", length = 500)
+    private String profilePicture;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
@@ -43,6 +52,9 @@ public class User {
 
     @Column(name = "email_verified")
     private Boolean emailVerified = false;
+
+    @Column(name = "verification_sent_at")
+    private LocalDateTime verificationSentAt;
 
     @Column(name = "last_login")
     private LocalDateTime lastLogin;

@@ -25,8 +25,18 @@ public class ProductRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0", inclusive = false, message = "Original price must be greater than 0")
+    private BigDecimal originalPrice;
+
     @DecimalMin(value = "0.0", inclusive = false, message = "Discount price must be greater than 0")
     private BigDecimal discountPrice;
+
+    @DecimalMin(value = "0.0", message = "Discount percentage cannot be negative")
+    @DecimalMax(value = "90.0", message = "Discount percentage cannot exceed 90%")
+    private BigDecimal discountPercentage;
+
+    private java.time.LocalDateTime saleStartDate;
+    private java.time.LocalDateTime saleEndDate;
 
     @Min(value = 0, message = "Stock quantity cannot be negative")
     private Integer stockQuantity;

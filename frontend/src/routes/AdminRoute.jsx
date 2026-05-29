@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, needsVerification, user, pendingVerificationEmail } = useAuth();
 
   if (isLoading) {
     return (
@@ -18,6 +18,10 @@ const AdminRoute = ({ children }) => {
 
   if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/" replace />;
+  }
+
+  if (needsVerification) {
+    return <Navigate to={`/verify-email-required?email=${encodeURIComponent(user?.email || pendingVerificationEmail || '')}`} replace />;
   }
 
   return children;

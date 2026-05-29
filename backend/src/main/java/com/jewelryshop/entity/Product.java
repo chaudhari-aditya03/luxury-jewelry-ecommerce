@@ -40,8 +40,20 @@ public class Product {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "original_price", precision = 10, scale = 2)
+    private BigDecimal originalPrice;
+
+    @Column(name = "discount_percentage", precision = 5, scale = 2)
+    private BigDecimal discountPercentage;
+
     @Column(name = "discount_price", precision = 10, scale = 2)
     private BigDecimal discountPrice;
+
+    @Column(name = "sale_start_date")
+    private LocalDateTime saleStartDate;
+
+    @Column(name = "sale_end_date")
+    private LocalDateTime saleEndDate;
 
     @Column(name = "stock_quantity")
     private Integer stockQuantity = 0;

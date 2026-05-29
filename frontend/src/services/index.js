@@ -7,9 +7,16 @@ export const authService = {
   register: (userData) =>
     apiClient.post('/auth/register', userData),
 
+  verifyEmail: (token) =>
+    apiClient.get('/auth/verify-email', { params: { token } }),
+
+  resendVerificationEmail: (email) =>
+    apiClient.post('/auth/resend-verification', { email }),
+
   logout: () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUser');
+    localStorage.removeItem('pendingVerificationEmail');
   },
 
   getCurrentUser: () =>
@@ -18,8 +25,16 @@ export const authService = {
   forgotPassword: (email) =>
     apiClient.post('/auth/forgot-password', { email }),
 
-  resetPassword: (token, newPassword) =>
-    apiClient.post('/auth/reset-password', { token, newPassword }),
+  resetPassword: (token, newPassword, confirmPassword = newPassword) =>
+    apiClient.post('/auth/reset-password', { token, newPassword, confirmPassword }),
+
+  validateResetToken: (token) =>
+    apiClient.post('/auth/validate-reset-token', { token }),
+
+  getGoogleLoginUrl: () => {
+    const baseUrl = apiClient.defaults.baseURL || '/api';
+    return `${baseUrl}/auth/google`;
+  },
 };
 
 export const productService = {
@@ -184,6 +199,15 @@ export const adminService = {
 
   getMonthlySales: (year = 2026) =>
     apiClient.get('/admin/analytics/monthly', { params: { year } }),
+
+  updateProductDiscount: (id, payload) =>
+    apiClient.put(`/admin/products/${id}/discount`, payload),
+
+  removeProductDiscount: (id) =>
+    apiClient.delete(`/admin/products/${id}/discount`),
+
+  scheduleProductSale: (id, payload) =>
+    apiClient.post(`/admin/products/${id}/schedule-sale`, payload),
 
   // Payment Management
   getAllPayments: (page = 0, size = 10) =>

@@ -10,6 +10,8 @@ import com.jewelryshop.repository.*;
 import com.jewelryshop.service.CouponService;
 import com.jewelryshop.service.OrderService;
 import com.jewelryshop.service.ActivityLogService;
+import com.jewelryshop.service.NotificationEmailService;
+import com.jewelryshop.service.ProductPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,6 +38,8 @@ public class OrderServiceImpl implements OrderService {
     private final CouponService couponService;
     private final ObjectMapper objectMapper;
     private final ActivityLogService activityLogService;
+    private final ProductPricingService productPricingService;
+    private final NotificationEmailService notificationEmailService;
 
     @Override
     @Transactional
@@ -68,9 +72,7 @@ public class OrderServiceImpl implements OrderService {
                 throw new BadRequestException("Insufficient stock for product: " + product.getName());
             }
 
-            BigDecimal price = product.getDiscountPrice() != null 
-                    ? product.getDiscountPrice() 
-                    : product.getPrice();
+                BigDecimal price = productPricingService.getCurrentPrice(product);
 
             if (item.getVariant() != null) {
                 price = price.add(item.getVariant().getAdditionalPrice());
@@ -109,9 +111,7 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setVariant(cartItem.getVariant());
             orderItem.setQuantity(cartItem.getQuantity());
 
-            BigDecimal price = cartItem.getProduct().getDiscountPrice() != null
-                    ? cartItem.getProduct().getDiscountPrice()
-                    : cartItem.getProduct().getPrice();
+                BigDecimal price = productPricingService.getCurrentPrice(cartItem.getProduct());
 
             if (cartItem.getVariant() != null) {
                 price = price.add(cartItem.getVariant().getAdditionalPrice());
@@ -136,6 +136,8 @@ public class OrderServiceImpl implements OrderService {
                 "Placed order " + savedOrder.getOrderNumber() + " with total amount: ₹" + finalAmount,
                 "ORDER", savedOrder.getId(), "SUCCESS", null);
 
+        notificationEmailService.sendOrderPlacedEmails(savedOrder);
+
         log.info("Order placed successfully: {}", savedOrder.getOrderNumber());
         return mapToOrderResponse(savedOrder);
     }
@@ -150,6 +152,8 @@ public class OrderServiceImpl implements OrderService {
 
         order.setOrderStatus(request.getOrderStatus());
         orderRepository.save(order);
+
+        notificationEmailService.sendOrderStatusEmail(order);
 
         log.info("Order status updated successfully: {}", orderId);
         return mapToOrderResponse(order);
@@ -186,6 +190,8 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderStatus(Order.OrderStatus.CANCELLED);
         order.setCancellationReason(request.getReason());
         orderRepository.save(order);
+
+        notificationEmailService.sendOrderStatusEmail(order);
 
         log.info("Order cancelled successfully: {}", orderId);
         return mapToOrderResponse(order);

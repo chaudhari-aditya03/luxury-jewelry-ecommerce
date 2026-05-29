@@ -57,4 +57,3 @@ application-local.properties
 ### Uploads ###
 uploads/
 !uploads/.gitkeep
-resources/application.properties

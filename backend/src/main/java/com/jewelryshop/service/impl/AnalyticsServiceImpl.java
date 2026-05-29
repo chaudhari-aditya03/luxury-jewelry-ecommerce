@@ -2,6 +2,7 @@ package com.jewelryshop.service.impl;
 
 import com.jewelryshop.dto.DashboardSummaryResponse;
 import com.jewelryshop.dto.MonthlySalesResponse;
+import com.jewelryshop.entity.Product;
 import com.jewelryshop.repository.OrderRepository;
 import com.jewelryshop.repository.ProductRepository;
 import com.jewelryshop.repository.UserRepository;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.ArrayList;
@@ -45,6 +47,31 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .filter(p -> p.getStockQuantity() < 10 && p.getIsActive())
                 .count();
         response.setLowStockProducts(lowStockProducts);
+
+        List<Product> saleProducts = productRepository.findAll().stream()
+            .filter(product -> product.getDiscountPercentage() != null && product.getDiscountPercentage().compareTo(BigDecimal.ZERO) > 0)
+            .toList();
+        response.setProductsOnSale((long) saleProducts.size());
+
+        BigDecimal discountSum = BigDecimal.ZERO;
+        BigDecimal revenueSaved = BigDecimal.ZERO;
+        for (Product product : saleProducts) {
+            BigDecimal base = product.getOriginalPrice() != null ? product.getOriginalPrice() : product.getPrice();
+            BigDecimal discountPrice = product.getDiscountPrice();
+            if (discountPrice == null && base != null && product.getDiscountPercentage() != null) {
+            discountPrice = base.subtract(base.multiply(product.getDiscountPercentage())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+            }
+            if (base != null && discountPrice != null) {
+            discountSum = discountSum.add(product.getDiscountPercentage());
+            revenueSaved = revenueSaved.add(base.subtract(discountPrice));
+            }
+        }
+
+        response.setAverageDiscount(saleProducts.isEmpty()
+            ? BigDecimal.ZERO
+            : discountSum.divide(BigDecimal.valueOf(saleProducts.size()), 2, RoundingMode.HALF_UP));
+        response.setRevenueSaved(revenueSaved.setScale(2, RoundingMode.HALF_UP));
 
         return response;
     }
