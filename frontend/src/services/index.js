@@ -14,8 +14,13 @@ export const authService = {
     apiClient.post('/auth/resend-verification', { email }),
 
   logout: () => {
+    localStorage.removeItem('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUser');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('email');
+    localStorage.removeItem('profileImage');
     localStorage.removeItem('pendingVerificationEmail');
   },
 

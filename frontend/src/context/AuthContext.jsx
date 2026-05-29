@@ -9,8 +9,59 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
 
+  const persistAuthState = (token, currentUser) => {
+    if (token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('authToken', token);
+    }
+
+    if (currentUser) {
+      localStorage.setItem('authUser', JSON.stringify(currentUser));
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      if (currentUser.role) {
+        localStorage.setItem('role', currentUser.role);
+      }
+      if (currentUser.email) {
+        localStorage.setItem('email', currentUser.email);
+      }
+      if (currentUser.profilePicture) {
+        localStorage.setItem('profileImage', currentUser.profilePicture);
+      }
+    }
+  };
+
+  const clearAuthState = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('email');
+    localStorage.removeItem('profileImage');
+    localStorage.removeItem('pendingVerificationEmail');
+  };
+
+  const loadCurrentUser = async () => {
+    const response = await authService.getCurrentUser();
+    const currentUser = response.data?.data;
+
+    if (!currentUser) {
+      throw new Error('Unable to load current user');
+    }
+
+    setUser(currentUser);
+    persistAuthState(localStorage.getItem('authToken') || localStorage.getItem('token'), currentUser);
+
+    if (currentUser?.emailVerified === false && currentUser?.email) {
+      setPendingVerificationEmail(currentUser.email);
+      localStorage.setItem('pendingVerificationEmail', currentUser.email);
+    }
+
+    return currentUser;
+  };
+
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     const savedUser = localStorage.getItem('authUser');
     const pendingEmail = localStorage.getItem('pendingVerificationEmail') || '';
     setPendingVerificationEmail(pendingEmail);
@@ -26,6 +77,7 @@ export const AuthProvider = ({ children }) => {
         const response = await authService.getCurrentUser();
         const currentUser = response.data?.data || parsedUser;
         setUser(currentUser);
+        persistAuthState(token, currentUser);
 
         if (currentUser?.emailVerified === false && currentUser?.email) {
           setPendingVerificationEmail(currentUser.email);
@@ -33,8 +85,7 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error('Failed to validate saved auth session:', err);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('authUser');
+        clearAuthState();
       } finally {
         setIsLoading(false);
       }
@@ -54,8 +105,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(email, password);
       const authData = response.data.data; // Backend returns { success, message, data }
 
-      localStorage.setItem('authToken', authData.token);
-      localStorage.setItem('authUser', JSON.stringify(authData.user));
+      persistAuthState(authData.token, authData.user);
       setUser(authData.user);
 
       return authData;
@@ -87,48 +137,46 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const completeExternalLogin = async (token) => {
+  const loginWithOAuth = async (token) => {
     try {
-      localStorage.setItem('authToken', token);
-      const response = await authService.getCurrentUser();
-      const currentUser = response.data?.data;
-      if (currentUser) {
-        localStorage.setItem('authUser', JSON.stringify(currentUser));
-        setUser(currentUser);
-        if (currentUser.emailVerified === false && currentUser.email) {
-          setPendingVerificationEmail(currentUser.email);
-          localStorage.setItem('pendingVerificationEmail', currentUser.email);
-        }
-      }
-      return currentUser;
+      setError(null);
+      persistAuthState(token, null);
+      return await loadCurrentUser();
     } catch (err) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('authUser');
+      clearAuthState();
+      setUser(null);
       throw err;
     }
   };
 
+  const completeExternalLogin = async (token) => loginWithOAuth(token);
+
   const logout = () => {
     authService.logout();
+    clearAuthState();
     setUser(null);
     setError(null);
     setPendingVerificationEmail('');
   };
 
-  const isAuthenticated = !!user;
+  const isAuthenticated = () => !!user;
+  const authenticated = !!user;
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'admin';
   const needsVerification = user?.emailVerified === false;
 
   const value = {
     user,
     isAuthenticated,
+    authenticated,
     isAdmin,
     needsVerification,
     pendingVerificationEmail,
     isLoading,
     error,
     login,
+    loginWithOAuth,
     register,
+    loadCurrentUser,
     completeExternalLogin,
     logout,
     setError,

@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 const OAuthSuccessPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { completeExternalLogin } = useAuth();
+  const { loginWithOAuth } = useAuth();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -14,26 +14,41 @@ const OAuthSuccessPage = () => {
     const finishOAuth = async () => {
       if (!token) {
         message.error('Missing OAuth token.');
-        navigate('/oauth-error?message=Missing OAuth token', { replace: true });
+        navigate('/oauth-error?message=Missing OAuth token in callback URL', { replace: true });
         return;
       }
 
       try {
-        await completeExternalLogin(token);
+        localStorage.setItem('token', token);
+        localStorage.setItem('authToken', token);
+
+        const currentUser = await loginWithOAuth(token);
         message.success('Google login successful');
-        navigate('/shop', { replace: true });
+
+        const role = String(currentUser?.role || '').toUpperCase();
+        if (role === 'ADMIN') {
+          navigate('/admin/dashboard', { replace: true });
+          return;
+        }
+
+        navigate('/', { replace: true });
       } catch (error) {
-        const apiMessage = error?.response?.data?.message || 'OAuth login failed';
+        const apiMessage = error?.response?.data?.message || error?.message || 'OAuth login failed';
+        const normalized = String(apiMessage).toLowerCase();
+        if (normalized.includes('expired') || normalized.includes('jwt')) {
+          navigate(`/oauth-error?message=${encodeURIComponent('JWT is invalid or expired. Please login again.')}`, { replace: true });
+          return;
+        }
         navigate(`/oauth-error?message=${encodeURIComponent(apiMessage)}`, { replace: true });
       }
     };
 
     void finishOAuth();
-  }, [searchParams, completeExternalLogin, navigate]);
+  }, [searchParams, loginWithOAuth, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8f5ef]">
-      <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#f8f5ef] px-4">
+      <div className="text-center w-full max-w-sm rounded-2xl border border-[#eadfca] bg-white p-8 shadow-sm">
         <Spin size="large" />
         <p className="mt-4 text-gray-700">Finishing your Google sign-in...</p>
       </div>

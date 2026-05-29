@@ -3,7 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, isLoading, needsVerification, user, pendingVerificationEmail } = useAuth();
+  const { isAuthenticated, authenticated, isAdmin, isLoading, needsVerification, user, pendingVerificationEmail } = useAuth();
+  const userIsAuthenticated = typeof isAuthenticated === 'function' ? isAuthenticated() : (authenticated ?? isAuthenticated);
 
   if (isLoading) {
     return (
@@ -16,7 +17,7 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  if (!userIsAuthenticated || !isAdmin) {
     return <Navigate to="/" replace />;
   }
 

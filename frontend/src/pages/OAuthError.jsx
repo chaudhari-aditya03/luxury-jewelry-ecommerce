@@ -5,13 +5,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 const OAuthErrorPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const message = searchParams.get('message') || 'OAuth login failed.';
+  const errorMessage = searchParams.get('message') || 'OAuth login failed.';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8f5ef] px-4">
       <div className="max-w-xl w-full bg-white rounded-2xl shadow-sm border border-[#eadfca] p-8 text-center">
         <h1 className="text-2xl font-semibold text-[#2b2622]">Google Sign-In Failed</h1>
-        <p className="mt-4 text-sm text-gray-600 break-words">{message}</p>
+        <p className="mt-4 text-sm text-gray-600">Google login failed.</p>
+        <p className="mt-2 text-xs text-gray-500 break-words">{errorMessage}</p>
         <div className="mt-6 flex justify-center gap-3">
           <Button onClick={() => navigate('/login', { replace: true })}>Back to Login</Button>
           <Button type="primary" onClick={() => navigate('/login', { replace: true })}>Try Again</Button>

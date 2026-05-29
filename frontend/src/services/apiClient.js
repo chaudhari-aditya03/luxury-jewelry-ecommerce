@@ -20,7 +20,7 @@ const apiClient = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,6 +37,7 @@ apiClient.interceptors.response.use(
   (error) => {
     // Don't redirect on auth endpoints (login/register should show their own errors)
     if (error.response?.status === 401 && !error.config?.url?.includes('/auth/')) {
+      localStorage.removeItem('token');
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
       window.location.href = '/login';
