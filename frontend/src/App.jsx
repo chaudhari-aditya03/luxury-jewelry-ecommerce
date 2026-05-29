@@ -15,6 +15,8 @@ import AboutPage from './pages/About';
 import ContactPage from './pages/Contact';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
+import OAuthSuccessPage from './pages/OAuthSuccess';
+import OAuthErrorPage from './pages/OAuthError';
 import VerifyEmailPage from './pages/VerifyEmail';
 import EmailVerificationRequiredPage from './pages/EmailVerificationRequiredPage';
 import ForgotPasswordPage from './pages/ForgotPassword';
@@ -66,6 +68,8 @@ function App() {
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/oauth-success" element={<OAuthSuccessPage />} />
+              <Route path="/oauth-error" element={<OAuthErrorPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/verify-email-required" element={<EmailVerificationRequiredPage />} />
