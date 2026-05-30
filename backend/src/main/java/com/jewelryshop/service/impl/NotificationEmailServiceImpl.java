@@ -2,7 +2,7 @@ package com.jewelryshop.service.impl;
 
 import com.jewelryshop.entity.Order;
 import com.jewelryshop.entity.User;
-import com.jewelryshop.service.EmailService;
+import com.jewelryshop.email.EmailService;
 import com.jewelryshop.service.NotificationEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
