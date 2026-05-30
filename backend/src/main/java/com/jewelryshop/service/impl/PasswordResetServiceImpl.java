@@ -16,12 +16,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.security.SecureRandom;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PasswordResetServiceImpl implements PasswordResetService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -44,7 +46,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         passwordResetTokenRepository.deleteByUserId(user.getId());
 
-        String token = UUID.randomUUID().toString().replace("-", "");
+        String token = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setToken(token);
         resetToken.setUser(user);

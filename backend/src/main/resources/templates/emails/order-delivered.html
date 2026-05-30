@@ -3,18 +3,33 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Order Delivered</title>
+    <title>Order delivered</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f1ea;font-family:Arial,Helvetica,sans-serif;color:#2b2622;">
-<div style="max-width:680px;margin:0 auto;padding:32px;">
-    <div style="background:#1f1a17;color:#fff;border-radius:18px 18px 0 0;padding:28px 32px;">
-        <div style="font-size:13px;letter-spacing:3px;text-transform:uppercase;opacity:0.75;" th:text="${brandName}">Jewelry Shop</div>
-        <div style="font-size:28px;font-weight:700;margin-top:10px;">Order delivered</div>
-    </div>
-    <div style="background:#fff;padding:32px;border-radius:0 0 18px 18px;line-height:1.8;font-size:15px;">
-        <p>Hi <strong th:text="${customerName}">Customer</strong>,</p>
-        <p>Your order <strong th:text="${orderNumber}">ORD-00000000</strong> has been delivered.</p>
-    </div>
-</div>
+<body style="margin:0;padding:0;background:#f7f2eb;font-family:Arial,Helvetica,sans-serif;color:#241c17;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#f7f2eb 0%,#efe3d1 100%);padding:32px 16px;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(36,28,23,0.12);">
+                <tr>
+                    <td style="background:linear-gradient(135deg,#5b3418 0%,#8f5a24 55%,#c58b3b 100%);padding:32px 36px;color:#fffaf2;">
+                        <div style="font-size:12px;letter-spacing:4px;text-transform:uppercase;opacity:0.75;" th:text="${brandName}">Luxury Maison</div>
+                        <div style="font-size:32px;line-height:1.1;font-weight:800;margin-top:12px;">Order delivered</div>
+                        <div style="margin-top:10px;font-size:15px;opacity:0.92;">Your order has safely reached you.</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:36px;line-height:1.75;font-size:15px;">
+                        <p style="margin:0 0 16px;">Hi <strong th:text="${customerName}">Customer</strong>,</p>
+                        <p style="margin:0 0 20px;">Your order <strong th:text="${orderNumber}">ORD-00000000</strong> has been delivered successfully.</p>
+                        <div style="padding:18px;border-radius:18px;background:#fff7ec;border:1px solid #eadfcd;">
+                            <div style="font-size:13px;color:#7a6047;margin-bottom:4px;">Thank you</div>
+                            <div style="font-weight:700;line-height:1.65;">We hope the experience matched the quality of the jewelry. If you need help, our support team is here for you.</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 </body>
 </html>

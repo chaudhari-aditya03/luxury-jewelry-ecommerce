@@ -30,7 +30,7 @@ public class NotificationEmailServiceImpl implements NotificationEmailService {
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
-    @Value("${app.admin.email:${spring.mail.username:}}")
+    @Value("${app.admin.email:${MAIL_FROM_EMAIL:${app.mail.from-email:}}}")
     private String adminEmail;
 
     @Value("${app.mail.from-name:Jewelry Shop}")
