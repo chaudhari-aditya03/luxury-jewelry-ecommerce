@@ -33,8 +33,10 @@ public class EmailServiceImpl implements EmailService {
 
     private static final String PROVIDER_SMTP = "smtp";
     private static final String PROVIDER_RESEND = "resend";
+    private static final String PROVIDER_BREVO = "brevo";
     private static final String PROVIDER_DISABLED = "disabled";
     private static final String RESEND_API_URL = "https://api.resend.com/emails";
+    private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     private final JavaMailSender mailSender;
     private final EmailTemplateService emailTemplateService;
@@ -97,6 +99,11 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
 
+        if (PROVIDER_BREVO.equalsIgnoreCase(mailProvider)) {
+            sendViaBrevo(resolvedSender, resolvedTo, subject, htmlBody, templateName);
+            return;
+        }
+
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
         helper.setTo(resolvedTo);
@@ -145,6 +152,41 @@ public class EmailServiceImpl implements EmailService {
             throw new IllegalStateException("Resend email request was interrupted", ex);
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to send email through Resend", ex);
+        }
+    }
+
+    private void sendViaBrevo(String from, String to, String subject, String htmlBody, String templateName) throws MessagingException {
+        if (mailApiKey == null || mailApiKey.isBlank()) {
+            throw new IllegalStateException("MAIL_API_KEY is required when app.mail.provider=brevo");
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sender", Map.of("name", fromName != null && !fromName.isBlank() ? fromName.trim() : "Jewelry Shop", "email", from));
+        payload.put("to", java.util.List.of(Map.of("email", to)));
+        payload.put("subject", subject);
+        payload.put("htmlContent", htmlBody);
+
+        try {
+            String requestBody = objectMapper.writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BREVO_API_URL))
+                    .header("api-key", mailApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("Email sent successfully via Brevo template={} to={}", templateName, maskEmail(to));
+                return;
+            }
+
+            throw new IllegalStateException("Brevo API returned status " + response.statusCode() + ": " + response.body());
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Brevo email request was interrupted", ex);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to send email through Brevo", ex);
         }
     }
 

@@ -25,38 +25,41 @@ public class MailConfig {
 
     private final Environment environment;
 
-    @Value("${spring.mail.host:smtp.gmail.com}")
+    @Value("${spring.mail.host:${MAIL_HOST:localhost}}")
     private String host;
 
-    @Value("${spring.mail.port:587}")
+    @Value("${spring.mail.port:${MAIL_PORT:25}}")
     private int port;
 
-    @Value("${spring.mail.username:${MAIL_USERNAME:${SMTP_USERNAME:${GMAIL_USERNAME:}}}}")
+    @Value("${spring.mail.username:${MAIL_USERNAME:}}")
     private String username;
 
-    @Value("${spring.mail.password:${MAIL_PASSWORD:${SMTP_PASSWORD:${GMAIL_APP_PASSWORD:}}}}")
+    @Value("${spring.mail.password:${MAIL_PASSWORD:}}")
     private String password;
 
-    @Value("${spring.mail.properties.mail.smtp.auth:true}")
+    @Value("${spring.mail.properties.mail.smtp.auth:${MAIL_SMTP_AUTH:false}}")
     private boolean smtpAuth;
 
-    @Value("${spring.mail.properties.mail.smtp.starttls.enable:true}")
+    @Value("${spring.mail.properties.mail.smtp.starttls.enable:${MAIL_STARTTLS_ENABLE:false}}")
     private boolean startTls;
 
-    @Value("${spring.mail.properties.mail.smtp.connectiontimeout:5000}")
+    @Value("${spring.mail.properties.mail.smtp.connectiontimeout:${MAIL_CONNECTION_TIMEOUT:5000}}")
     private int connectionTimeout;
 
-    @Value("${spring.mail.properties.mail.smtp.timeout:3000}")
+    @Value("${spring.mail.properties.mail.smtp.timeout:${MAIL_TIMEOUT:5000}}")
     private int timeout;
 
-    @Value("${spring.mail.properties.mail.smtp.writetimeout:5000}")
+    @Value("${spring.mail.properties.mail.smtp.writetimeout:${MAIL_WRITE_TIMEOUT:5000}}")
     private int writeTimeout;
 
-    @Value("${spring.mail.properties.mail.debug:true}")
+    @Value("${spring.mail.properties.mail.debug:${MAIL_DEBUG:false}}")
     private boolean debug;
 
     @Value("${app.mail.from-email:${MAIL_FROM_EMAIL:${MAIL_USERNAME:${spring.mail.username:}}}}")
     private String fromEmail;
+
+    @Value("${app.mail.provider:brevo}")
+    private String mailProvider;
 
     private String resolvedFromEmail;
 
@@ -72,13 +75,15 @@ public class MailConfig {
                 environment.getProperty("GMAIL_USERNAME")
         );
 
-        if (username == null || username.isBlank() || password == null || password.isBlank()) {
-            log.warn("Mail credentials are not fully configured. Set MAIL_USERNAME and MAIL_PASSWORD (Gmail app password) or SMTP_USERNAME/SMTP_PASSWORD.");
+        if ("smtp".equalsIgnoreCase(mailProvider) && (username == null || username.isBlank() || password == null || password.isBlank())) {
+            log.warn("SMTP credentials are not fully configured. Set MAIL_USERNAME and MAIL_PASSWORD if app.mail.provider=smtp.");
         }
 
         if (resolvedFromEmail == null || resolvedFromEmail.isBlank()) {
             log.warn("Mail sender address is not configured. Set MAIL_FROM_EMAIL or MAIL_USERNAME so outbound mail can be addressed correctly.");
         }
+
+        log.info("Mail provider configured as {}", mailProvider);
     }
 
     @Bean

@@ -62,8 +62,8 @@ This file contains setup instructions for deploying the backend to Render.
 
    # Mail delivery
    # Render is often unreliable with direct Gmail SMTP. Prefer an HTTPS mail provider.
-   # Recommended: Resend, SendGrid, or Mailgun.
-   MAIL_PROVIDER=resend
+   # Recommended: Brevo, Resend, SendGrid, or Mailgun.
+   MAIL_PROVIDER=brevo
    MAIL_API_KEY=your_provider_api_key
    MAIL_FROM_EMAIL=no-reply@yourdomain.com
    MAIL_FROM_NAME=Jewelry Maison
@@ -136,8 +136,8 @@ Make sure this endpoint exists or remove health check in settings.
 
 ### Mail Delivery Fails on Render
 - Do not rely on `smtp.gmail.com` from Render for production mail delivery.
-- Use an HTTPS mail API such as Resend, SendGrid, or Mailgun.
-- Set `MAIL_PROVIDER=resend` and configure `MAIL_API_KEY`, `MAIL_FROM_EMAIL`, and `MAIL_FROM_NAME` in Render.
+- Use an HTTPS mail API such as Brevo, Resend, SendGrid, or Mailgun.
+- Set `MAIL_PROVIDER=brevo` and configure `MAIL_API_KEY`, `MAIL_FROM_EMAIL`, and `MAIL_FROM_NAME` in Render.
 - If you temporarily disable mail with `MAIL_ENABLED=false`, registration and order flows will continue, but verification and notification emails will not be sent.
 
 ## Important Notes
