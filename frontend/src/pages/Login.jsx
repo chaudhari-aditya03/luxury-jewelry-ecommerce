@@ -1,172 +1,247 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import MainLayout from '../layouts/MainLayout';
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import Alert from '../components/common/Alert';
+import React, { useEffect, useState } from 'react';
+import { Form, Input, Button, Checkbox, message } from 'antd';
+import {
+  EyeInvisibleOutlined,
+  EyeTwoTone,
+  MailOutlined,
+  LockOutlined,
+  GoogleOutlined,
+  SafetyCertificateOutlined,
+  CreditCardOutlined,
+  GiftOutlined,
+  HeartOutlined,
+} from '@ant-design/icons';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Sparkles, Chrome, Crown, ShieldCheck, Truck, Gem } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { validateEmail } from '../utils/helpers';
+import { authService } from '../services';
+
+const trustBadges = [
+  { icon: Crown, label: 'Hallmark Certified' },
+  { icon: SafetyCertificateOutlined, label: 'Secure Payments' },
+  { icon: Truck, label: 'Free Shipping' },
+  { icon: HeartOutlined, label: 'Lifetime Support' },
+];
+
+const stats = [
+  { value: '50k+', label: 'Happy Clients' },
+  { value: '24/7', label: 'Concierge Support' },
+  { value: '100%', label: 'Certified Pieces' },
+];
 
 const LoginPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [generalError, setGeneralError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { login, isAdmin, completeExternalLogin } = useAuth();
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
+  const [searchParams] = useSearchParams();
 
-  const onSubmit = async (data) => {
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const oauth2 = searchParams.get('oauth2');
+    if (token && oauth2) {
+      const hydrateOauthLogin = async () => {
+        try {
+          setLoading(true);
+          await completeExternalLogin(token);
+          message.success('Google login successful');
+          navigate('/shop', { replace: true });
+        } catch (error) {
+          message.error('Google login failed. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void hydrateOauthLogin();
+    }
+  }, [searchParams, completeExternalLogin, navigate]);
+
+  const onFinish = async (values) => {
+    setLoading(true);
     try {
-      setGeneralError(null);
-      const authData = await login(data.email, data.password);
-      
-      // Redirect based on user role
-      if (authData.user.role === 'ADMIN') {
+      const authData = await login(values.email, values.password);
+      message.success('Welcome back!');
+      const userRole = authData?.user?.role;
+      if (userRole === 'ADMIN' || userRole === 'admin' || isAdmin) {
         navigate('/admin');
       } else {
-        navigate('/account');
+        navigate('/shop');
       }
     } catch (error) {
-      setGeneralError(error.response?.data?.message || 'Login failed. Please try again.');
+      const status = error?.response?.status;
+      const apiMessage = error?.response?.data?.message;
+      if (!error?.response) {
+        message.error('Cannot connect to server. Please check your connection.');
+      } else if (status === 401) {
+        message.error(apiMessage || 'Invalid email or password.');
+      } else if (apiMessage?.toLowerCase().includes('verify your email')) {
+        message.error(apiMessage || 'Please verify your email before signing in.');
+      } else {
+        message.error(apiMessage || 'Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <MainLayout>
-      <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md">
-          <div className="card p-8 md:p-12">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Welcome Back
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Sign in to your account to continue
+    <div className="auth-shell">
+      <aside className="auth-brand-panel auth-brand-panel--login">
+        <div className="auth-brand-hero auth-brand-hero--login">
+          <div className="auth-brand-hero__overlay" />
+          <div className="auth-brand-hero__copy">
+            <Link to="/" className="auth-brand-logo group no-underline">
+              <span className="auth-brand-logo__mark">
+                <Sparkles className="h-5 w-5 text-gold" />
+              </span>
+              <span>
+                <span className="auth-brand-logo__title">LUXURY MAISON</span>
+                <span className="auth-brand-logo__subtitle">Fine Jewelry House</span>
+              </span>
+            </Link>
+
+            <div className="auth-brand-story">
+              <p className="page-eyebrow text-white/75">Welcome back</p>
+              <h2 className="auth-brand-title">
+                Timeless elegance
+                <span className="block text-gold">awaits you.</span>
+              </h2>
+              <p className="auth-brand-description">
+                Discover handcrafted jewelry designed for modern sophistication, presented with the calm, editorial confidence of a world-class maison.
               </p>
-            </div>
 
-            {/* Alert */}
-            {generalError && (
-              <Alert
-                type="error"
-                message={generalError}
-                onClose={() => setGeneralError(null)}
-                closeable
-              />
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Email */}
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="you@example.com"
-                icon={<EnvelopeIcon className="w-5 h-5 text-gray-400" />}
-                error={errors.email?.message}
-                {...register('email', {
-                  required: 'Email is required',
-                  validate: (value) =>
-                    validateEmail(value) || 'Please enter a valid email',
+              <div className="auth-trust-grid" aria-label="Luxury trust indicators">
+                {trustBadges.map((badge) => {
+                  const Icon = badge.icon;
+                  return (
+                    <div key={badge.label} className="auth-glass-chip">
+                      <Icon className="h-4 w-4 text-gold" />
+                      <span>{badge.label}</span>
+                    </div>
+                  );
                 })}
-              />
-
-              {/* Password */}
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  icon={<LockClosedIcon className="w-5 h-5 text-gray-400" />}
-                  error={errors.password?.message}
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters',
-                    },
-                  })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-10 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <EyeSlashIcon className="w-5 h-5" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-
-              {/* Remember & Forgot */}
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded" />
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Remember me
-                  </span>
-                </label>
-                <a
-                  href="#forgot"
-                  className="text-rose-gold-500 hover:text-rose-gold-600 font-medium"
-                >
-                  Forgot password?
-                </a>
-              </div>
-
-              {/* Submit */}
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="w-full"
-              >
-                Sign In
-              </Button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white dark:bg-gray-800 text-gray-500">
-                  or
-                </span>
               </div>
             </div>
 
-            {/* Demo Account */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
-    
+            <div className="auth-stats-grid" aria-label="Brand statistics">
+              {stats.map((stat) => (
+                <div key={stat.label} className="auth-stat-card">
+                  <span className="auth-stat-card__value">{stat.value}</span>
+                  <span className="auth-stat-card__label">{stat.label}</span>
+                </div>
+              ))}
             </div>
-
-            {/* Sign Up Link */}
-            <p className="text-center text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                  className="text-rose-gold-500 hover:text-rose-gold-600 font-medium"
-              >
-                Sign up
-              </Link>
-            </p>
           </div>
         </div>
-      </div>
-    </MainLayout>
+      </aside>
+
+      <main className="auth-card">
+        <div className="auth-card-panel auth-card-panel--login">
+          <div className="auth-mobile-brand lg:hidden">
+            <Link to="/" className="auth-brand-logo no-underline">
+              <span className="auth-brand-logo__mark">
+                <Sparkles className="h-4 w-4 text-gold" />
+              </span>
+              <span>
+                <span className="auth-brand-logo__title">LUXURY MAISON</span>
+                <span className="auth-brand-logo__subtitle">Fine Jewelry House</span>
+              </span>
+            </Link>
+          </div>
+
+          <div className="auth-form-header">
+            <p className="page-eyebrow">Sign In</p>
+            <h1 className="auth-form-title">Welcome Back</h1>
+            <p className="auth-form-subtitle">Sign in to continue your luxury shopping experience.</p>
+          </div>
+
+          <Form name="login" initialValues={{ remember: true }} onFinish={onFinish} layout="vertical" size="large">
+            <Form.Item
+              name="email"
+              label="Email Address"
+              rules={[
+                { required: true, message: 'Email is required' },
+                { type: 'email', message: 'Enter a valid email' }
+              ]}
+            >
+              <Input
+                placeholder="you@example.com"
+                prefix={<MailOutlined className="text-gold/80" />}
+                className="auth-input !h-12 !rounded-full"
+                aria-label="Email address"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              label="Password"
+              rules={[{ required: true, message: 'Password is required' }]}
+            >
+              <Input.Password
+                placeholder="Enter your password"
+                prefix={<LockOutlined className="text-gold/80" />}
+                className="auth-input !h-12 !rounded-full"
+                iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                aria-label="Password"
+              />
+            </Form.Item>
+
+            <div className="auth-form-meta">
+              <Form.Item name="remember" valuePropName="checked" noStyle>
+                <Checkbox className="auth-checkbox">Remember me</Checkbox>
+              </Form.Item>
+              <Link to="/forgot-password" className="text-sm font-medium text-gold no-underline hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading} className="auth-primary-btn !h-12 !rounded-full !border-0 !text-base">
+                Sign In
+              </Button>
+            </Form.Item>
+
+            <div className="auth-social-stack">
+              <Button
+                block
+                className="auth-secondary-btn !h-12 !rounded-full"
+                onClick={() => window.location.assign(authService.getGoogleLoginUrl())}
+              >
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Chrome className="h-4 w-4" />
+                  Continue with Google
+                </span>
+              </Button>
+              <Button block className="auth-secondary-btn auth-secondary-btn--muted !h-12 !rounded-full" disabled>
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Gem className="h-4 w-4" />
+                  Continue with Apple
+                </span>
+              </Button>
+            </div>
+          </Form>
+
+          <div className="auth-card-footer">
+            <p className="text-sm text-muted">
+              Don't have an account?{' '}
+              <Link to="/register" className="font-semibold text-gold no-underline hover:underline">
+                Create one free
+              </Link>
+            </p>
+            <div className="auth-footer-badges">
+              <span><ShieldCheck className="h-3.5 w-3.5" /> Secure session</span>
+              <span><GiftOutlined className="h-3.5 w-3.5" /> Premium access</span>
+            </div>
+          </div>
+
+          <p className="auth-legal-copy">
+            By signing in, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </div>
+      </main>
+    </div>
   );
 };
 
 export default LoginPage;
+

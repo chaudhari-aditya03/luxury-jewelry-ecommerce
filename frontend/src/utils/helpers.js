@@ -17,12 +17,24 @@ export const truncateText = (text, maxLength) => {
   return text.substring(0, maxLength) + '...';
 };
 
-export const formatDate = (date) => {
+export const formatDate = (dateValue) => {
+  const normalizedValue = typeof dateValue === 'string' ? dateValue.trim() : dateValue;
+
+  if (normalizedValue === null || normalizedValue === undefined || normalizedValue === '') {
+    return 'N/A';
+  }
+
+  const date = new Date(normalizedValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'N/A';
+  }
+
   return new Intl.DateTimeFormat('en-IN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(new Date(date));
+  }).format(date);
 };
 
 export const getInitials = (name) => {
@@ -45,6 +57,41 @@ export const debounce = (func, delay) => {
 export const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+};
+
+/**
+ * Converts image filename or path to full URL
+ * Handles both legacy paths (/uploads/file.jpg) and new filenames (file.jpg)
+ * @param {string} imageUrl - Image filename or path from database
+ * @returns {string} - Full absolute URL to image
+ */
+export const getImageUrl = (imageUrl) => {
+  // Return placeholder if no image
+  if (!imageUrl) return 'https://via.placeholder.com/300';
+  
+  // If it's already a full URL (http/https), return as is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Get backend base URL
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+  const isPlaceholderApiUrl = configuredApiUrl?.includes('your-backend.onrender.com');
+  const API_BASE = (!configuredApiUrl || isPlaceholderApiUrl)
+    ? (import.meta.env.DEV ? 'http://localhost:8080/api' : '')
+    : configuredApiUrl;
+
+  if (!API_BASE) return 'https://via.placeholder.com/300';
+  const BASE_URL = API_BASE.replace('/api', '');
+  
+  // Handle both cases:
+  // 1. Legacy: "/uploads/filename.jpg" -> use as is
+  // 2. New: "filename.jpg" -> prepend "/uploads/"
+  const imagePath = imageUrl.startsWith('/uploads/') 
+    ? imageUrl 
+    : `/uploads/${imageUrl}`;
+  
+  return BASE_URL + imagePath;
 };
 
 export const validatePassword = (password) => {

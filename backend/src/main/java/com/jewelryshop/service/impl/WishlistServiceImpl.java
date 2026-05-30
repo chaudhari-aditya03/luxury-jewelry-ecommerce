@@ -66,6 +66,7 @@ public class WishlistServiceImpl implements WishlistService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<WishlistResponse> getWishlist(Long userId) {
         log.info("Fetching wishlist for user: {}", userId);
 

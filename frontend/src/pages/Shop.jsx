@@ -1,239 +1,314 @@
 import React, { useState, useEffect } from 'react';
-import { FunnelIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import {
+  Layout, Row, Col, Card, Typography, Input, Select, Slider,
+  Checkbox, Radio, Button, Pagination, Empty, Spin, Breadcrumb,
+  Drawer, Space, message
+} from 'antd';
+import { FilterOutlined, SearchOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import ProductCard from '../components/product/ProductCard';
-import Pagination from '../components/common/Pagination';
-import Alert from '../components/common/Alert';
-import Input from '../components/common/Input';
-import Select from '../components/common/Select';
-import { SkeletonProduct } from '../components/common/Skeleton';
-import { productService } from '../services';
+import { productService, cartService, userService } from '../services';
+import { useAuth } from '../context/AuthContext';
+import { getImageUrl } from '../utils/helpers';
+import './Shop.css';
+
+const { Title, Text } = Typography;
+const { Sider, Content } = Layout;
+const { Search } = Input;
+const { Option } = Select;
 
 const ShopPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [filters, setFilters] = useState({
     search: '',
-    category: '',
-    priceRange: 'all',
+    category: [],
+    priceRange: [0, 1000000],
+    rating: 0,
     sortBy: 'newest',
   });
-  const [currentPage, setCurrentPage] = useState(0); // Backend uses 0-indexed pages
-  const [isLoading, setIsLoading] = useState(true);
+  const [mobileFilterVisible, setMobileFilterVisible] = useState(false);
   const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const pageSize = 9;
   const [categories, setCategories] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const [error, setError] = useState('');
-  const itemsPerPage = 12;
 
-  // Fetch categories on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await productService.getCategories();
-        setCategories(response.data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
     fetchCategories();
   }, []);
 
-  // Fetch products when filters or page changes
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
-        
-        const params = {
-          page: currentPage,
-          size: itemsPerPage,
-          search: filters.search || undefined,
-          categoryId: filters.category || undefined,
-          minPrice: filters.priceRange === 'budget' ? 0 : filters.priceRange === 'mid' ? 15000 : filters.priceRange === 'premium' ? 35000 : undefined,
-          maxPrice: filters.priceRange === 'budget' ? 15000 : filters.priceRange === 'mid' ? 35000 : filters.priceRange === 'premium' ? 1000000 : undefined,
-          sortBy: filters.sortBy,
-        };
-
-        console.log('Fetching products with params:', params);
-        const response = await productService.getAllProducts(params.page, params.size, params);
-        console.log('Products API Response:', response.data);
-        
-        const data = response.data.data;
-        
-        if (data && data.content) {
-          console.log('Products received:', data.content.length);
-          setProducts(data.content);
-          setTotalPages(data.totalPages || 0);
-          setTotalElements(data.totalElements || 0);
-        } else {
-          console.warn('Unexpected response structure:', data);
-          setProducts([]);
-          setError('Unexpected response format from server');
-        }
-      } catch (error) {
-        console.error('Failed to fetch products:', error);
-        console.error('Error details:', error.response?.data || error.message);
-        setProducts([]);
-        setError(error.response?.data?.message || 'Failed to load products. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchProducts();
   }, [filters, currentPage]);
 
-  return (
-    <MainLayout>
-      <div className="section">
-        <div className="container-custom">
-          {/* Header */}
-          <h1 className="text-4xl font-bold mb-2">Shop Our Collection</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-8">
-            {totalElements} products available
-          </p>
+  const fetchCategories = async () => {
+    try {
+      const response = await productService.getCategories();
+      const items = response.data?.data || [];
+      setCategories(items.map((item) => ({
+        label: item.name,
+        value: item.id,
+      })));
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      setCategories([]);
+    }
+  };
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar Filters */}
-            <div className="lg:sticky lg:top-24 h-max">
-              <div className="card p-6 space-y-6">
-                <h2 className="font-bold text-lg flex items-center gap-2">
-                  <FunnelIcon className="w-5 h-5" />
-                  Filters
-                </h2>
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const categoryId = filters.category.length > 0 ? filters.category[0] : undefined;
+      const minPrice = filters.priceRange?.[0];
+      const maxPrice = filters.priceRange?.[1];
 
-                {/* Search */}
-                <div>
-                  <Input
-                    placeholder="Search products..."
-                    value={filters.search}
-                    onChange={(e) => {
-                      setFilters({ ...filters, search: e.target.value });
-                      setCurrentPage(0);
-                    }}
-                  />
-                </div>
+      const response = await productService.getAllProducts(currentPage - 1, pageSize, {
+        search: filters.search || undefined,
+        categoryId,
+        minPrice,
+        maxPrice,
+        sortBy: filters.sortBy,
+      });
 
-                {/* Category */}
-                <Select
-                  label="Category"
-                  placeholder="All Categories"
-                  options={[
-                    ...categories.map(cat => ({ 
-                      label: cat.name, 
-                      value: cat.id 
-                    }))
-                  ]}
-                  value={filters.category}
-                  onChange={(e) => {
-                    setFilters({ ...filters, category: e.target.value });
-                    setCurrentPage(0);
-                  }}
-                />
+      const pageData = response.data?.data;
+      const content = pageData?.content || [];
 
-                {/* Price Range */}
-                <Select
-                  label="Price Range"
-                  options={[
-                    { label: 'All Prices', value: 'all' },
-                    { label: 'Budget (< ₹15k)', value: 'budget' },
-                    { label: 'Mid-range (₹15k - ₹35k)', value: 'mid' },
-                    { label: 'Premium (> ₹35k)', value: 'premium' },
-                  ]}
-                  value={filters.priceRange}
-                  onChange={(e) => {
-                    setFilters({ ...filters, priceRange: e.target.value });
-                    setCurrentPage(0);
-                  }}
-                />
+      const mappedProducts = content.map((product) => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: Number(product.discountPrice ?? product.price ?? 0),
+        originalPrice: Number(product.price ?? 0),
+        discountPercentage:
+          product.discountPrice && Number(product.price || 0) > Number(product.discountPrice || 0)
+            ? Math.round(((Number(product.price) - Number(product.discountPrice)) / Number(product.price)) * 100)
+            : 0,
+        rating: product.averageRating ?? 0,
+        reviewCount: product.reviewCount ?? 0,
+        category: product.categoryName || 'Jewelry',
+        stockQuantity: product.stockQuantity ?? 0,
+        isFeatured: product.isFeatured ?? false,
+        isActive: product.isActive ?? true,
+        saleStartDate: product.saleStartDate,
+        saleEndDate: product.saleEndDate,
+        variants: product.variants || [],
+        image: getImageUrl(product.images?.find((img) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl),
+      }));
 
-                {/* Sort */}
-                <Select
-                  label="Sort By"
-                  options={[
-                    { label: 'Newest', value: 'newest' },
-                    { label: 'Price: Low to High', value: 'price-asc' },
-                    { label: 'Price: High to Low', value: 'price-desc' },
-                    { label: 'Rating', value: 'rating' },
-                  ]}
-                  value={filters.sortBy}
-                  onChange={(e) => {
-                    setFilters({ ...filters, sortBy: e.target.value });
-                    setCurrentPage(0);
-                  }}
-                />
+      setProducts(
+        filters.rating > 0
+          ? mappedProducts.filter((product) => Number(product.rating || 0) >= Number(filters.rating))
+          : mappedProducts,
+      );
+      setTotalItems(pageData?.totalElements ?? 0);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    }
+    setIsLoading(false);
+  };
 
-                <button
-                  onClick={() => {
-                    setFilters({
-                      search: '',
-                      category: '',
-                      priceRange: 'all',
-                      sortBy: 'newest',
-                    });
-                    setCurrentPage(0);
-                  }}
-                  className="w-full py-2 text-rose-gold-500 hover:bg-rose-gold-50 dark:hover:bg-rose-gold-900/10 rounded-lg transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            </div>
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
 
-            {/* Products Grid */}
-            <div className="lg:col-span-3">
-              {error && (
-                <Alert
-                  type="error"
-                  message={error}
-                  closeable={true}
-                  onClose={() => setError('')}
-                />
-              )}
+  const handleAddToCart = async (productId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
 
-              {isLoading && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <SkeletonProduct key={i} />
-                  ))}
-                </div>
-              )}
+    try {
+      await cartService.addToCart(productId, 1, null);
+      message.success('Added to cart');
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add to cart');
+    }
+  };
 
-              {!isLoading && products.length > 0 && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {products.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={(id) => console.log('Add to cart:', id)}
-                        onAddToWishlist={(id) => console.log('Add to wishlist:', id)}
-                      />
-                    ))}
-                  </div>
+  const handleAddToWishlist = async (productId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
 
-                  {totalPages > 1 && (
-                    <Pagination
-                      currentPage={currentPage + 1}
-                      totalPages={totalPages}
-                      onPageChange={(page) => setCurrentPage(page - 1)}
-                    />
-                  )}
-                </>
-              )}
+    try {
+      await userService.addToWishlist(productId);
+      message.success('Added to wishlist');
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to add to wishlist');
+    }
+  };
 
-              {!isLoading && products.length === 0 && (
-                <Alert
-                  type="info"
-                  message="No products found matching your filters. Try adjusting your search criteria."
-                  closeable={false}
-                />
-              )}
-            </div>
-          </div>
+  const FilterContent = () => (
+    <div className="space-y-6">
+      <div className="rounded-[1.6rem] border border-[#eadfca] bg-white p-5 shadow-[0_14px_36px_rgba(17,17,17,0.05)]">
+        <Title level={5} className="!mb-4 !font-display !text-luxury">Categories</Title>
+        <Checkbox.Group
+          options={categories}
+          value={filters.category}
+          onChange={v => handleFilterChange('category', v)}
+          className="shop-checkbox-group"
+        />
+      </div>
+
+      <div className="rounded-[1.6rem] border border-[#eadfca] bg-white p-5 shadow-[0_14px_36px_rgba(17,17,17,0.05)]">
+        <Title level={5} className="!mb-4 !font-display !text-luxury">Price Range</Title>
+        <Slider
+          range
+          min={0}
+          max={100000}
+          step={1000}
+          value={filters.priceRange}
+          onAfterChange={v => handleFilterChange('priceRange', v)}
+          className="shop-price-slider"
+        />
+        <div className="shop-filter-range-labels">
+          <Text type="secondary">₹0</Text>
+          <Text type="secondary">₹1,00,000+</Text>
         </div>
       </div>
+
+      <div className="rounded-[1.6rem] border border-[#eadfca] bg-white p-5 shadow-[0_14px_36px_rgba(17,17,17,0.05)]">
+        <Title level={5} className="!mb-4 !font-display !text-luxury">Rating</Title>
+        <Radio.Group
+          onChange={e => handleFilterChange('rating', e.target.value)}
+          value={filters.rating}
+          className="shop-radio-group"
+        >
+          <Radio value={4}>4 Stars & Up</Radio>
+          <Radio value={3}>3 Stars & Up</Radio>
+          <Radio value={2}>2 Stars & Up</Radio>
+          <Radio value={0}>Any Rating</Radio>
+        </Radio.Group>
+      </div>
+
+      <Button
+        block
+        className="!h-12 !rounded-full !border-[#e8dcc4] !bg-background !font-semibold !text-luxury hover:!border-gold hover:!text-gold"
+        onClick={() => setFilters({ search: '', category: [], priceRange: [0, 1000000], rating: 0, sortBy: 'newest' })}
+      >
+        Clear Filters
+      </Button>
+    </div>
+  );
+
+  return (
+    <MainLayout>
+      <section className="shop-page">
+        <div className="shop-shell">
+          <Breadcrumb items={[{ title: 'Home', href: '/' }, { title: 'Shop' }]} className="shop-breadcrumb" />
+
+          <div className="overflow-hidden rounded-[2.2rem] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(198,167,105,0.18),transparent_30%),linear-gradient(135deg,#fffdf8_0%,#faf6ef_100%)] p-6 shadow-[0_20px_60px_rgba(17,17,17,0.08)] md:p-8">
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-[0.35em] text-gold">Curated collection</p>
+                <Title level={2} className="!m-0 !font-display !text-luxury">Shop Collection</Title>
+                <p className="max-w-2xl text-sm leading-7 text-muted">
+                  Discover handcrafted jewellery designed for elegant gifting, daily wear, and statement moments.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+                <Search
+                  allowClear
+                  enterButton={<SearchOutlined />}
+                  placeholder="Search rings, necklaces, earrings..."
+                  className="shop-search"
+                  onSearch={(value) => handleFilterChange('search', value.trim())}
+                />
+                <Button
+                  icon={<FilterOutlined />}
+                  className="!h-12 !rounded-full !border-[#e8dcc4] !bg-white !px-5 !font-semibold !text-luxury md:hidden"
+                  onClick={() => setMobileFilterVisible(true)}
+                >
+                  Filters
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Layout className="shop-layout">
+            <Sider width={300} theme="light" className="shop-sider hidden md:block">
+              <div className="shop-sidebar-sticky">
+                <div className="shop-filter-card">
+                  <FilterContent />
+                </div>
+              </div>
+            </Sider>
+
+            <Content className="shop-content">
+              <Card className="shop-toolbar border-0 shadow-[0_14px_36px_rgba(17,17,17,0.05)]" styles={{ body: { padding: '14px 20px' } }}>
+                <Row justify="space-between" align="middle" gutter={[16, 16]}>
+                  <Col xs={24} sm={12}>
+                    <Text className="shop-product-count">{totalItems} Products Found</Text>
+                  </Col>
+                  <Col xs={24} sm={12} className="shop-sort-col">
+                    <Space>
+                      <Text className="shop-sort-label">Sort By:</Text>
+                      <Select
+                        value={filters.sortBy}
+                        className="shop-sort-select"
+                        onChange={v => handleFilterChange('sortBy', v)}
+                      >
+                        <Option value="newest">Newest Arrivals</Option>
+                        <Option value="price-asc">Price: Low to High</Option>
+                        <Option value="price-desc">Price: High to Low</Option>
+                        <Option value="rating">Top Rated</Option>
+                      </Select>
+                    </Space>
+                  </Col>
+                </Row>
+              </Card>
+
+              {isLoading ? (
+                <div className="shop-loading-wrap">
+                  <Spin size="large" />
+                </div>
+              ) : products.length > 0 ? (
+                <>
+                  <Row gutter={[24, 24]} className="shop-products-grid">
+                    {products.map(product => (
+                      <Col xs={24} sm={12} md={12} lg={8} xl={8} key={product.id} className="shop-product-col">
+                        <ProductCard
+                          product={product}
+                          onAddToCart={handleAddToCart}
+                          onAddToWishlist={handleAddToWishlist}
+                        />
+                      </Col>
+                    ))}
+                  </Row>
+                  <div className="shop-pagination-wrap">
+                    <Pagination
+                      current={currentPage}
+                      total={totalItems}
+                      pageSize={pageSize}
+                      onChange={p => setCurrentPage(p)}
+                      showSizeChanger={false}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="shop-empty-wrap">
+                  <Empty description="No products found" />
+                </div>
+              )}
+            </Content>
+          </Layout>
+        </div>
+      </section>
+
+      <Drawer
+        title="Filters"
+        placement="left"
+        onClose={() => setMobileFilterVisible(false)}
+        open={mobileFilterVisible}
+        className="shop-mobile-filter-drawer"
+      >
+        <FilterContent />
+      </Drawer>
     </MainLayout>
   );
 };

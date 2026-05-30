@@ -39,6 +39,41 @@ if ($currentPath.Path -notlike "*backend") {
     Set-Location -Path "backend" -ErrorAction SilentlyContinue
 }
 
+function Import-EnvFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path $Path)) {
+        return
+    }
+
+    Get-Content $Path | ForEach-Object {
+        $line = $_.Trim()
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) {
+            return
+        }
+
+        $parts = $line.Split('=', 2)
+        if ($parts.Count -ne 2) {
+            return
+        }
+
+        $name = $parts[0].Trim()
+        $value = $parts[1].Trim()
+
+        if ($name) {
+            [System.Environment]::SetEnvironmentVariable($name, $value, 'Process')
+        }
+    }
+}
+
+Import-EnvFile -Path ".env"
+
+# Allow an optional local override file to win over the shared env file.
+Import-EnvFile -Path ".env.local"
+
 # Check if pom.xml exists
 if (-not (Test-Path "pom.xml")) {
     Write-Host "❌ pom.xml not found. Are you in the correct directory?" -ForegroundColor Red

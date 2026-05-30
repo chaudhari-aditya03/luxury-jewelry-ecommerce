@@ -2,6 +2,7 @@ package com.jewelryshop.config;
 
 import com.jewelryshop.entity.*;
 import com.jewelryshop.repository.CategoryRepository;
+import com.jewelryshop.repository.CouponRepository;
 import com.jewelryshop.repository.ProductRepository;
 import com.jewelryshop.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final CouponRepository couponRepository;
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -33,6 +36,9 @@ public class DataInitializer implements CommandLineRunner {
         
         // Initialize Categories
         List<Category> categories = initializeCategories();
+
+        // Initialize Coupons
+        initializeCoupons();
         
         // Initialize Products
         initializeProducts(categories);
@@ -192,6 +198,72 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             log.info("ℹ️ Products already exist");
         }
+    }
+
+    private void initializeCoupons() {
+        createCouponIfMissing(
+                "WELCOME10",
+                Coupon.DiscountType.PERCENT,
+                new BigDecimal("10"),
+                new BigDecimal("3000"),
+                new BigDecimal("1000"),
+                Coupon.CouponType.WELCOME,
+                true,
+                "10% Discount",
+                "Valid for 30 Days"
+        );
+
+        createCouponIfMissing(
+                "FIRSTBUY15",
+                Coupon.DiscountType.PERCENT,
+                new BigDecimal("15"),
+                new BigDecimal("0"),
+                new BigDecimal("2000"),
+                Coupon.CouponType.FIRST_ORDER,
+                true,
+                "First order reward",
+                "One-time use per user"
+        );
+
+        createCouponIfMissing(
+                "VIP20",
+                Coupon.DiscountType.PERCENT,
+                new BigDecimal("20"),
+                new BigDecimal("0"),
+                new BigDecimal("5000"),
+                Coupon.CouponType.VIP,
+                true,
+                "VIP loyalty reward",
+                "Available after total spending exceeds ₹50,000"
+        );
+    }
+
+    private void createCouponIfMissing(String code,
+                                       Coupon.DiscountType discountType,
+                                       BigDecimal discountValue,
+                                       BigDecimal minOrderAmount,
+                                       BigDecimal maxDiscountAmount,
+                                       Coupon.CouponType couponType,
+                                       boolean oneTimePerUser,
+                                       String title,
+                                       String description) {
+        if (couponRepository.existsByCodeAndDeletedAtIsNull(code)) {
+            return;
+        }
+
+        Coupon coupon = new Coupon();
+        coupon.setCode(code);
+        coupon.setDiscountType(discountType);
+        coupon.setDiscountValue(discountValue);
+        coupon.setMinOrderAmount(minOrderAmount);
+        coupon.setMaxDiscountAmount(maxDiscountAmount);
+        coupon.setStartDate(LocalDate.now());
+        coupon.setExpiryDate(LocalDate.now().plusYears(5));
+        coupon.setIsActive(true);
+        coupon.setCouponType(couponType);
+        coupon.setOneTimePerUser(oneTimePerUser);
+        coupon.setDescription(title + " - " + description);
+        couponRepository.save(coupon);
     }
 
     private Product createProduct(String name, String sku, String description, 

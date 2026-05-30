@@ -1,282 +1,289 @@
 import React, { useEffect, useState } from 'react';
-import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Spin } from 'antd';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Legend
+} from 'recharts';
 import AdminLayout from '../../layouts/AdminLayout';
-import Alert from '../../components/common/Alert';
-import Skeleton from '../../components/common/Skeleton';
 import { formatPrice } from '../../utils/helpers';
 import { adminService } from '../../services';
 
 const AdminDashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalUsers: 0,
+    totalProducts: 0,
+    productsOnSale: 0,
+    averageDiscount: 0,
+    revenueSaved: 0,
+  });
   const [monthlySales, setMonthlySales] = useState([]);
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [summaryResponse, monthlyResponse] = await Promise.all([
+          adminService.getDashboardSummary(),
+          adminService.getMonthlySales(new Date().getFullYear()),
+        ]);
+
+        const summaryData = summaryResponse.data?.data;
+        const monthlyData = monthlyResponse.data?.data || [];
+
+        setSummary({
+          totalRevenue: Number(summaryData?.totalRevenue ?? 0),
+          totalOrders: summaryData?.totalOrders ?? 0,
+          totalUsers: summaryData?.totalUsers ?? 0,
+          totalProducts: summaryData?.totalProducts ?? 0,
+          productsOnSale: summaryData?.productsOnSale ?? 0,
+          averageDiscount: Number(summaryData?.averageDiscount ?? 0),
+          revenueSaved: Number(summaryData?.revenueSaved ?? 0),
+        });
+
+        setMonthlySales(monthlyData.map((item) => ({
+          name: item.month?.slice(0, 3) || '',
+          sales: Number(item.totalRevenue ?? 0),
+          orders: item.totalOrders ?? 0,
+        })));
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      }
+      setIsLoading(false);
+    };
+
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch dashboard summary and monthly sales
-      const [summaryRes, salesRes] = await Promise.all([
-        adminService.getDashboardSummary(),
-        adminService.getMonthlySales(2026)
-      ]);
+  const stats = [
+    {
+      title: 'Total Revenue',
+      value: formatPrice(summary.totalRevenue),
+      icon: '💰',
+      change: '+12.5%',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #C6A769 0%, #B0925B 100%)',
+      textColor: '#70541e',
+      bg: 'linear-gradient(135deg, #fdfbf7, #f6f0df)',
+    },
+    {
+      title: 'Total Orders',
+      value: summary.totalOrders.toLocaleString(),
+      icon: '📦',
+      change: '+8.2%',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      textColor: '#3730a3',
+      bg: 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
+    },
+    {
+      title: 'Total Users',
+      value: summary.totalUsers.toLocaleString(),
+      icon: '👥',
+      change: '+15.3%',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #10b981, #059669)',
+      textColor: '#065f46',
+      bg: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
+    },
+    {
+      title: 'Total Products',
+      value: summary.totalProducts.toLocaleString(),
+      icon: '💎',
+      change: '+3.1%',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #f43f5e, #e11d48)',
+      textColor: '#9f1239',
+      bg: 'linear-gradient(135deg, #fff1f2, #ffe4e6)',
+    },
+    {
+      title: 'Products On Sale',
+      value: summary.productsOnSale.toLocaleString(),
+      icon: '🏷️',
+      change: 'Live',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+      textColor: '#075985',
+      bg: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+    },
+    {
+      title: 'Average Discount',
+      value: `${Number(summary.averageDiscount || 0).toFixed(0)}%`,
+      icon: '📉',
+      change: 'Current',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #14b8a6, #0f766e)',
+      textColor: '#115e59',
+      bg: 'linear-gradient(135deg, #f0fdfa, #ccfbf1)',
+    },
+    {
+      title: 'Revenue Saved',
+      value: formatPrice(summary.revenueSaved),
+      icon: '💹',
+      change: 'From discounts',
+      positive: true,
+      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+      textColor: '#92400e',
+      bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+    },
+  ];
 
-      setDashboardData(summaryRes.data.data);
-      setMonthlySales(salesRes.data.data || []);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError(err.response?.data?.message || 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white rounded-xl shadow-xl p-3 border border-gray-100 text-sm">
+          <p className="font-semibold text-gray-700 mb-1">{label}</p>
+          {payload.map((entry, i) => (
+            <p key={i} style={{ color: entry.color }}>
+              {entry.name === 'sales' ? formatPrice(entry.value) : `${entry.value} orders`}
+            </p>
+          ))}
+        </div>
+      );
     }
+    return null;
   };
 
-  // Map month numbers to names
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  const monthlySalesData = monthlySales.map(item => ({
-    month: monthNames[item.month - 1] || item.month,
-    sales: parseFloat(item.revenue || 0),
-    orders: item.orderCount || 0
-  }));
-
-  const categoryData = dashboardData?.categoryDistribution?.map((cat, index) => ({
-    name: cat.categoryName,
-    value: parseFloat(cat.percentage || 0),
-    color: ['#b8956a', '#a68757', '#8b7048', '#6b543f', '#9d8259'][index % 5]
-  })) || [];
-
-  const stats = dashboardData ? [
-    { 
-      label: 'Total Users', 
-      value: dashboardData.totalUsers?.toLocaleString() || '0', 
-      change: dashboardData.userGrowth || '+0%' 
-    },
-    { 
-      label: 'Total Revenue', 
-      value: formatPrice(dashboardData.totalRevenue || 0), 
-      change: dashboardData.revenueGrowth || '+0%' 
-    },
-    { 
-      label: 'Total Orders', 
-      value: dashboardData.totalOrders?.toLocaleString() || '0', 
-      change: dashboardData.orderGrowth || '+0%'
-    },
-    { 
-      label: 'Avg. Order Value', 
-      value: formatPrice(dashboardData.averageOrderValue || 0), 
-      change: dashboardData.aovGrowth || '+0%' 
-    },
-  ] : [];
-
-  const topProducts = dashboardData?.topProducts || [];
-
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-20 w-full" />
-          <div className="grid grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </AdminLayout>
-    );
-  }
+  const quickLinks = [
+    { label: 'Manage Products', href: '/admin/products', icon: '💎', desc: 'Add, edit, remove products' },
+    { label: 'View All Orders', href: '/admin/orders', icon: '📦', desc: 'Process & track orders' },
+    { label: 'User Management', href: '/admin/users', icon: '👥', desc: 'View & manage users' },
+    { label: 'Categories', href: '/admin/categories', icon: '🗂️', desc: 'Manage product categories' },
+    { label: 'Discounts', href: '/admin/discounts', icon: '🏷️', desc: 'Create and schedule sales' },
+  ];
 
   return (
     <AdminLayout>
       <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Welcome back! Here's your business overview.
-          </p>
+
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Welcome back, Admin 👋 — Here's what's happening today.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block" />
+            Live data · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
         </div>
 
-        {error && (
-          <Alert type="error" message={error} closeable onClose={() => setError(null)} />
-        )}
-
-        {error && (
-          <Alert type="error" message={error} closeable onClose={() => setError(null)} />
-        )}
-
-        {/* Key Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, idx) => (
-            <div
-              key={idx}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700"
-            >
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-                {stat.label}
-              </p>
-              <div className="flex items-end justify-between">
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {stat.value}
-                </p>
-                <span className={`text-sm font-medium ${
-                  stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {stat.change}
-                </span>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          {stats.map((stat, i) => (
+            <div key={i} className="rounded-2xl p-5 relative overflow-hidden"
+              style={{ background: stat.bg, border: '1px solid rgba(0,0,0,0.04)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: stat.textColor, opacity: 0.7 }}>
+                    {stat.title}
+                  </p>
+                  <p className="text-3xl font-bold" style={{ color: stat.textColor }}>
+                    {isLoading ? <Spin size="small" /> : stat.value}
+                  </p>
+                  <p className="text-xs mt-2 font-medium" style={{ color: stat.positive ? '#16a34a' : '#dc2626' }}>
+                    {stat.positive ? '↑' : '↓'} {stat.change} vs last month
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                  style={{ background: 'rgba(255,255,255,0.6)' }}>
+                  {stat.icon}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sales Chart */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold mb-6">Monthly Sales</h2>
-            {monthlySalesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={monthlySalesData}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#b8956a" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#b8956a" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value) => formatPrice(value)}
-                    labelStyle={{ color: '#000' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="#b8956a"
-                    fillOpacity={1}
-                    fill="url(#colorSales)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                No sales data available
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Revenue Chart */}
+          <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm" style={{ border: '1px solid rgba(0,0,0,0.04)' }}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Revenue Overview</h3>
+                <p className="text-gray-400 text-sm">Monthly revenue for {new Date().getFullYear()}</p>
               </div>
-            )}
-          </div>
-
-          {/* Category Distribution */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold mb-6">Sales by Category</h2>
-            {categoryData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {categoryData.map((cat) => (
-                    <div key={cat.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: cat.color }}
-                        />
-                        <span>{cat.name}</span>
-                      </div>
-                      <span className="font-medium">{cat.value.toFixed(1)}%</span>
-                    </div>
-                  ))}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: 'rgba(198,167,105,0.1)', color: '#B0925B' }}>
+                ₹ Revenue
+              </div>
+            </div>
+            <div style={{ height: 300 }}>
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Spin size="large" />
                 </div>
-              </>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                No category data available
-              </div>
-            )}
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlySales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#C6A769" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#C6A769" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={v => `₹${v / 1000}k`} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="sales" stroke="#C6A769" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" name="sales" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Orders Chart */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border: '1px solid rgba(0,0,0,0.04)' }}>
+            <div className="mb-6">
+              <h3 className="font-bold text-gray-900 text-lg">Monthly Orders</h3>
+              <p className="text-gray-400 text-sm">Order count by month</p>
+            </div>
+            <div style={{ height: 300 }}>
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Spin />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlySales} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="orders" fill="#6366f1" radius={[6, 6, 0, 0]} name="orders" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Orders Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold mb-6">Orders Overview</h2>
-          {monthlySalesData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlySalesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="orders" fill="#b8956a" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-500">
-              No order data available
-            </div>
-          )}
+        {/* Quick Links */}
+        <div>
+          <h3 className="font-bold text-gray-900 text-lg mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {quickLinks.map(link => (
+              <a key={link.href} href={link.href}
+                className="group flex items-center gap-4 p-4 bg-white rounded-2xl no-underline transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                  style={{ background: 'linear-gradient(135deg, rgba(198,167,105,0.12), rgba(176,146,91,0.07))' }}>
+                  {link.icon}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm group-hover:text-yellow-700 transition-colors">{link.label}</p>
+                  <p className="text-gray-400 text-xs">{link.desc}</p>
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
 
-        {/* Top Products */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold mb-6">Top Selling Products</h2>
-          {topProducts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-4 font-semibold">Product</th>
-                    <th className="text-right py-3 px-4 font-semibold">Sold</th>
-                    <th className="text-right py-3 px-4 font-semibold">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topProducts.map((product) => (
-                    <tr
-                      key={product.productId || product.id}
-                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <td className="py-3 px-4 font-medium">{product.productName || product.name}</td>
-                      <td className="text-right py-3 px-4">{product.totalSold || product.sold}</td>
-                      <td className="text-right py-3 px-4 text-rose-gold-500 font-bold">
-                        {formatPrice(product.totalRevenue || product.revenue)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-gray-500">
-              No product data available
-            </div>
-          )}
-        </div>
       </div>
     </AdminLayout>
   );

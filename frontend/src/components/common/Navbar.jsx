@@ -1,150 +1,180 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Bars3Icon, XMarkIcon, ShoppingCartIcon, HeartIcon, UserIcon, MoonIcon, SunIcon } from '@heroicons/react/24/outline';
+import React, { useEffect, useState } from 'react';
+import { Layout, Menu, Button, Badge, Drawer, Dropdown, Avatar, Input, Space, theme } from 'antd';
+import {
+  ShoppingCartOutlined,
+  UserOutlined,
+  MenuOutlined,
+  SearchOutlined,
+  HeartOutlined,
+  LogoutOutlined,
+  ShoppingOutlined,
+  DashboardOutlined
+} from '@ant-design/icons';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { useMobile } from '../../hooks';
+import { cartService } from '../../services';
+
+const { Header } = Layout;
+const { Search } = Input;
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
-  const isMobile = useMobile();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { token } = theme.useToken();
+  const selectedMenuKey = location.pathname.startsWith('/admin') ? '/admin' : location.pathname;
 
   const handleLogout = () => {
     logout();
-    setMobileMenuOpen(false);
+    setCartCount(0);
+    navigate('/');
   };
 
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      if (!isAuthenticated) {
+        setCartCount(0);
+        return;
+      }
+
+      try {
+        const response = await cartService.getCart();
+        const cart = response.data?.data;
+        setCartCount(Number(cart?.totalItems ?? 0));
+      } catch {
+        setCartCount(0);
+      }
+    };
+
+    fetchCartCount();
+  }, [isAuthenticated, location.pathname]);
+
+  const menuItems = [
+    { key: '/', label: <Link to="/">Home</Link> },
+    { key: '/shop', label: <Link to="/shop">Shop</Link> },
+    { key: '/categories', label: <Link to="/categories">Categories</Link> },
+    { key: '/about', label: <Link to="/about">About</Link> },
+    ...(isAuthenticated && isAdmin
+      ? [{ key: '/admin', label: <Link to="/admin">Dashboard</Link> }]
+      : []),
+  ];
+
+  const userMenuItems = [
+    ...(isAuthenticated && isAdmin
+      ? [{
+          key: 'dashboard',
+          icon: <DashboardOutlined />,
+          label: <Link to="/admin">Dashboard</Link>,
+        }]
+      : []),
+    {
+      key: 'account',
+      icon: <UserOutlined />,
+      label: <Link to="/account">My Account</Link>,
+    },
+    {
+      key: 'orders',
+      icon: <ShoppingOutlined />,
+      label: <Link to="/account/orders">My Orders</Link>,
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Logout',
+      danger: true,
+      onClick: handleLogout,
+    },
+  ];
+
   return (
-    <nav className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-soft">
-      <div className="container-custom py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-rose-gold-500 to-rose-gold-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">💎</span>
-            </div>
-            <span className="font-display text-xl font-bold text-charcoal-600 hidden sm:inline">
-              Jewelry Store
-            </span>
-          </Link>
-
-          {/* Desktop Menu */}
-          {!isMobile && (
-            <div className="flex items-center gap-8">
-              <Link to="/shop" className="text-gray-700 dark:text-gray-300 hover:text-rose-gold-500 transition-colors">
-                Shop
-              </Link>
-              <a href="#categories" className="text-gray-700 dark:text-gray-300 hover:text-rose-gold-500 transition-colors">
-                Categories
-              </a>
-              <a href="#about" className="text-gray-700 dark:text-gray-300 hover:text-rose-gold-500 transition-colors">
-                About
-              </a>
-            </div>
-          )}
-
-          {/* Right Icons */}
-          <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              aria-label="Toggle theme"
-            >
-              {isDark ? (
-                <SunIcon className="w-5 h-5 text-yellow-500" />
-              ) : (
-                <MoonIcon className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
-
-            {/* Search (Desktop) */}
-            {!isMobile && (
-              <Link to="/shop" className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Search...</span>
-              </Link>
-            )}
-
-            {/* Cart */}
-            <Link to="/cart" className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <ShoppingCartIcon className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 bg-rose-gold-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                0
-              </span>
-            </Link>
-
-            {/* Wishlist */}
-            <Link to="/wishlist" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <HeartIcon className="w-5 h-5" />
-            </Link>
-
-            {/* Account / Auth */}
-            {isAuthenticated ? (
-              <div className="relative group">
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2">
-                  <UserIcon className="w-5 h-5" />
-                  <span className="hidden sm:inline text-sm">Account</span>
-                </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-premium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                  <Link to="/account" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
-                    My Account
-                  </Link>
-                  <Link to="/account/orders" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
-                    My Orders
-                  </Link>
-                  {user?.role === 'admin' && (
-                    <Link to="/admin" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">
-                      Admin Panel
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border-t border-gray-200 dark:border-gray-700"
-                  >
-                    Logout
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <Link to="/login" className="px-4 py-2 text-sm bg-rose-gold-500 text-white rounded-lg hover:bg-rose-gold-600 transition-colors">
-                Login
-              </Link>
-            )}
-
-            {/* Mobile Menu Toggle */}
-            {isMobile && (
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                {mobileMenuOpen ? (
-                  <XMarkIcon className="w-6 h-6" />
-                ) : (
-                  <Bars3Icon className="w-6 h-6" />
-                )}
-              </button>
-            )}
+    <>
+      <Header
+        style={{
+          position: 'fixed',
+          zIndex: 1000,
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#fff',
+          padding: '0 24px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+        }}
+      >
+        {/* Logo */}
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 32, height: 32, background: `linear-gradient(135deg, ${token.colorPrimary} 0%, #b8860b 100%)`, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>
+            JS
           </div>
+          <Link to="/" style={{ fontSize: 20, fontWeight: 700, color: '#1f1f1f', fontFamily: "'Playfair Display', serif" }}>
+            Jewelry Store
+          </Link>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobile && mobileMenuOpen && (
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-3">
-            <Link to="/shop" className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              Shop
-            </Link>
-            <a href="#categories" className="px-4 py-2 hover:bg-rose-gold-50 dark:hover:bg-rose-gold-900/10 rounded-lg">
-              Categories
-            </a>
-            <a href="#about" className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              About
-            </a>
+        {/* Desktop Menu */}
+        <div className="hidden md:flex flex-1 justify-center">
+          <Menu
+            mode="horizontal"
+            selectedKeys={[selectedMenuKey]}
+            items={menuItems}
+            style={{ borderBottom: 'none', minWidth: 400, justifyContent: 'center' }}
+          />
+        </div>
+
+        {/* Actions */}
+        <Space size="middle">
+          <div className="hidden md:block">
+            <Search placeholder="Search..." onSearch={value => navigate(`/shop?search=${value}`)} style={{ width: 200 }} />
           </div>
-        )}
-      </div>
-    </nav>
+
+          <Link to="/wishlist">
+            <Button type="text" icon={<HeartOutlined style={{ fontSize: 20 }} />} />
+          </Link>
+
+          <Link to={isAuthenticated ? "/cart" : "/login"}>
+            <Badge count={cartCount} color={token.colorPrimary}>
+              <Button type="text" icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />} />
+            </Badge>
+          </Link>
+
+          {isAuthenticated ? (
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+              <span>
+                <Avatar icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary, cursor: 'pointer' }} />
+              </span>
+            </Dropdown>
+          ) : (
+            <Link to="/login">
+              <Button type="primary">Login</Button>
+            </Link>
+          )}
+
+          {/* Mobile Menu Button */}
+          <Button
+            className="md:hidden"
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileMenuOpen(true)}
+          />
+        </Space>
+      </Header>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        title="Menu"
+        placement="right"
+        onClose={() => setMobileMenuOpen(false)}
+        open={mobileMenuOpen}
+      >
+        <Menu mode="vertical" selectedKeys={[selectedMenuKey]} items={menuItems} onClick={() => setMobileMenuOpen(false)} />
+        <div style={{ marginTop: 20 }}>
+          <Search placeholder="Search products..." onSearch={value => { navigate(`/shop?search=${value}`); setMobileMenuOpen(false); }} />
+        </div>
+      </Drawer>
+    </>
   );
 };
 

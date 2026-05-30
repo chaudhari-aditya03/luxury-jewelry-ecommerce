@@ -12,6 +12,6 @@ public class JewelryEcommerceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(JewelryEcommerceApplication.class, args);
-        System.out.println("🚀 Jewelry E-Commerce Backend Started Successfully!");
+        System.out.println(" Jewelry E-Commerce Backend Started Successfully!");
     }
 }

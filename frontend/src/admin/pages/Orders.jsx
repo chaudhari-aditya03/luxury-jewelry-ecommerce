@@ -1,255 +1,330 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { EyeIcon } from '@heroicons/react/24/outline';
+import React, { useMemo, useState, useEffect } from 'react';
+import {
+  Table, Button, Tag, Space, Modal, Typography, Input,
+  Descriptions, message, Select, Dropdown
+} from 'antd';
+import { EyeOutlined, DownOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useLocation } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
-import Select from '../../components/common/Select';
-import Pagination from '../../components/common/Pagination';
-import Modal from '../../components/common/Modal';
-import Button from '../../components/common/Button';
-import Toast from '../../components/common/Toast';
-import Skeleton from '../../components/common/Skeleton';
 import { formatPrice, formatDate } from '../../utils/helpers';
 import { adminService } from '../../services';
 
-const AdminOrders = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting,  setSubmitting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [toast, setToast] = useState(null);
+const { Title, Text } = Typography;
+const { Option } = Select;
 
-  const { register, handleSubmit, setValue } = useForm();
+const AdminOrders = () => {
+  const location = useLocation();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [searchText, setSearchText] = useState('');
+
+  const statusFilter = useMemo(() => new URLSearchParams(location.search).get('status'), [location.search]);
+  const pageTitle = useMemo(() => {
+    const titles = {
+      PENDING: 'Pending Orders',
+      PROCESSING: 'Processing Orders',
+      SHIPPED: 'Shipped Orders',
+      DELIVERED: 'Delivered Orders',
+      CANCELLED: 'Cancelled Orders',
+    };
+    return titles[statusFilter] || 'All Orders';
+  }, [statusFilter]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [currentPage]);
+    fetchOrders(1, pagination.pageSize);
+  }, []);
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await adminService.getAllOrders(currentPage, 10);
-      const data = response.data.data;
-      
-      setOrders(data.content || []);
-      setTotalPages(data.totalPages || 0);
-    } catch (err) {
-      console.error('Error fetching orders:', err);
-      setToast({ type: 'error', message: 'Failed to load orders' });
-    } finally {
-      setLoading(false);
+  const renderAddress = (addr) => {
+    if (!addr) return '-';
+
+    let obj = addr;
+    if (typeof addr === 'string') {
+      try {
+        obj = JSON.parse(addr);
+      } catch (e) {
+        // not JSON, return raw string
+        return <div style={{ whiteSpace: 'pre-wrap' }}>{addr}</div>;
+      }
     }
+
+    if (typeof obj === 'object' && obj !== null) {
+      const parts = [];
+      if (obj.fullName) parts.push(<div key="name" style={{ fontWeight: 600 }}>{obj.fullName}</div>);
+      const line1 = obj.addressLine1 || '';
+      const line2 = obj.addressLine2 ? `, ${obj.addressLine2}` : '';
+      if (line1 || line2) parts.push(<div key="addr">{`${line1}${line2}`}</div>);
+      const cityState = [obj.city, obj.state].filter(Boolean).join(', ');
+      const postal = obj.postalCode ? ` ${obj.postalCode}` : '';
+      if (cityState || postal) parts.push(<div key="city">{`${cityState}${postal}`.trim()}</div>);
+      if (obj.country) parts.push(<div key="country">{obj.country}</div>);
+      if (obj.phone) parts.push(<div key="phone">{obj.phone}</div>);
+
+      return <div style={{ lineHeight: 1.4 }}>{parts}</div>;
+    }
+
+    return <div>{String(obj)}</div>;
   };
 
-  const handleUpdateStatus = async (data) => {
+  const fetchOrders = async (page, pageSize) => {
+    setLoading(true);
     try {
-      setSubmitting(true);
-      await adminService.updateOrderStatus(selectedOrder.id, { status: data.status });
-      setToast({ type: 'success', message: 'Order status updated successfully' });
-      setShowModal(false);
-      fetchOrders();
-    } catch (err) {
-      setToast({ 
-        type: 'error', 
-        message: err.response?.data?.message || 'Failed to update order status' 
+      const response = await adminService.getAllOrders(page - 1, pageSize);
+      const pageData = response.data?.data;
+      const content = pageData?.content || [];
+
+      setOrders(content.map((order) => ({
+        key: order.id,
+        id: order.id,
+        orderNumber: order.orderNumber,
+        userId: order.userId,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        date: order.createdAt,
+        total: Number(order.finalAmount ?? order.totalAmount ?? 0),
+        status: order.orderStatus,
+        paymentStatus: order.paymentStatus,
+        itemsCount: order.itemsCount ?? order.orderItems?.length ?? 0,
+        items: order.orderItems || [],
+        address: order.addressSnapshot,
+      })));
+
+      setPagination({
+        current: page,
+        pageSize,
+        total: pageData?.totalElements ?? 0,
       });
-    } finally {
-      setSubmitting(false);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to load orders');
+      setOrders([]);
+    }
+    setLoading(false);
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await adminService.updateOrderStatus(orderId, { orderStatus: newStatus });
+      message.success(`Order status updated to ${newStatus}`);
+      fetchOrders(pagination.current, pagination.pageSize);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to update order status');
     }
   };
 
-  const handleViewOrder = (order) => {
+  const showOrderDetails = (order) => {
     setSelectedOrder(order);
-    setValue('status', order.status);
-    setShowModal(true);
+    setIsModalVisible(true);
   };
 
-  const getStatusColor = (status) => {
-    const statusMap = {
-      'PENDING': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      'PROCESSING': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'CONFIRMED': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      'SHIPPED': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      'DELIVERED': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      'CANCELLED': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    };
-    return statusMap[status] || 'bg-gray-100 text-gray-800';
+  const handleDeleteOrderHistory = (order) => {
+    Modal.confirm({
+      title: 'Delete order history?',
+      content: `This will remove order ${order.orderNumber} from the admin order history.`,
+      okText: 'Delete History',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await adminService.deleteOrderHistory(order.id);
+          message.success('Order history deleted successfully');
+          if (selectedOrder?.id === order.id) {
+            setIsModalVisible(false);
+            setSelectedOrder(null);
+          }
+          fetchOrders(pagination.current, pagination.pageSize);
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Failed to delete order history');
+          throw error;
+        }
+      },
+    });
   };
 
-  if (loading && orders.length === 0) {
-    return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-12 w-64" />
-          <Skeleton className="h-96 w-full" />
+  const statusMenuItems = (record) => ([
+    { key: 'PLACED', label: 'Placed' },
+    { key: 'PROCESSING', label: 'Processing' },
+    { key: 'SHIPPED', label: 'Shipped' },
+    { key: 'DELIVERED', label: 'Delivered' },
+    { key: 'CANCELLED', label: 'Cancelled', danger: true },
+    { key: 'RETURNED', label: 'Returned' },
+  ]);
+
+  const columns = [
+    {
+      title: 'Order ID',
+      dataIndex: 'orderNumber',
+      key: 'orderNumber',
+      render: text => <Text strong>{text}</Text>,
+    },
+    {
+      title: 'Customer',
+      key: 'customer',
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{record.customerName || `User #${record.userId}`}</div>
+          <div style={{ fontSize: 12, color: '#666' }}>{record.customerEmail || '-'}</div>
         </div>
-      </AdminLayout>
-    );
-  }
+      ),
+    },
+    {
+      title: 'Date',
+      dataIndex: 'date',
+      key: 'date',
+      render: date => formatDate(date),
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+      defaultSortOrder: 'descend',
+    },
+    {
+      title: 'Items',
+      dataIndex: 'itemsCount',
+      key: 'itemsCount',
+      render: (count) => count || 0,
+    },
+    {
+      title: 'Total',
+      dataIndex: 'total',
+      key: 'total',
+      render: total => formatPrice(total),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status, record) => (
+        <Dropdown
+          menu={{ items: statusMenuItems(record), onClick: ({ key }) => handleStatusChange(record.id, key) }}
+          trigger={['click']}
+        >
+          <span>
+            <Tag
+              color={
+                status === 'DELIVERED' ? 'success' :
+                  status === 'PROCESSING' || status === 'SHIPPED' || status === 'PLACED' ? 'processing' :
+                    status === 'CANCELLED' || status === 'RETURNED' ? 'error' : 'default'
+              }
+              style={{ cursor: 'pointer' }}
+            >
+              {status} <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+            </Tag>
+          </span>
+        </Dropdown>
+      ),
+      filters: [
+        { text: 'Processing', value: 'PROCESSING' },
+        { text: 'Delivered', value: 'DELIVERED' },
+        { text: 'Cancelled', value: 'CANCELLED' },
+      ],
+      onFilter: (value, record) => record.status === value,
+    },
+    {
+      title: 'Payment',
+      dataIndex: 'paymentStatus',
+      key: 'paymentStatus',
+      render: (status) => {
+        let color = 'default';
+        if (status === 'PAID') color = 'success';
+        if (status === 'PENDING') color = 'warning';
+        if (status === 'FAILED' || status === 'REFUNDED') color = 'error';
+        return <Tag color={color}>{status || 'PENDING'}</Tag>;
+      }
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Space>
+          <Button type="link" icon={<EyeOutlined />} onClick={() => showOrderDetails(record)}>
+            View
+          </Button>
+          <Button danger type="link" icon={<DeleteOutlined />} onClick={() => handleDeleteOrderHistory(record)}>
+            Delete
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  const filteredOrders = orders.filter((order) => {
+    const routeStatusMatches = !statusFilter ||
+      (statusFilter === 'PENDING' ? ['PLACED', 'PENDING'].includes(order.status) : order.status === statusFilter);
+    const search = searchText.toLowerCase();
+    const searchMatches = !search ||
+      order.orderNumber?.toLowerCase().includes(search) ||
+      order.customerName?.toLowerCase().includes(search) ||
+      order.customerEmail?.toLowerCase().includes(search);
+
+    return routeStatusMatches && searchMatches;
+  });
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {toast && (
-          <Toast
-            type={toast.type}
-            message={toast.message}
-            onClose={() => setToast(null)}
-          />
-        )}
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>{pageTitle}</Title>
 
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Orders Management</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            View and manage customer orders
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-semibold">Order ID</th>
-                  <th className="text-left py-3 px-4 font-semibold">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold">Date</th>
-                  <th className="text-right py-3 px-4 font-semibold">Total</th>
-                  <th className="text-center py-3 px-4 font-semibold">Payment</th>
-                  <th className="text-center py-3 px-4 font-semibold">Status</th>
-                  <th className="text-center py-3 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.length > 0 ? (
-                  orders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <td className="py-4 px-4 font-medium">#{order.id}</td>
-                      <td className="py-4 px-4">{order.userFullName || 'N/A'}</td>
-                      <td className="py-4 px-4 text-gray-600 dark:text-gray-400">
-                        {formatDate(order.createdAt || order.orderDate)}
-                      </td>
-                      <td className="py-4 px-4 text-right text-rose-gold-500 font-bold">
-                        {formatPrice(order.totalAmount)}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          order.paymentStatus === 'PAID' 
-                            ? 'bg-green-100 text-green-800'  
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.paymentStatus || 'PENDING'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                            order.status
-                          )}`}
-                        >
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <button 
-                          onClick={() => handleViewOrder(order)}
-                          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                          title="View & Update Order"
-                        >
-                          <EyeIcon className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="text-center py-8 text-gray-500">
-                      No orders found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination
-                currentPage={currentPage + 1}
-                totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page - 1)}
-              />
-            </div>
-          )}
-        </div>
+      <div style={{ marginBottom: 16 }}>
+        <Input
+          placeholder="Search by order number, customer name, or email..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ maxWidth: 420 }}
+        />
       </div>
 
-      {/* Order Details Modal */}
+      <Table
+        columns={columns}
+        dataSource={filteredOrders}
+        loading={loading}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          onChange: (page, pageSize) => fetchOrders(page, pageSize),
+        }}
+      />
+
       <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title={`Order #${selectedOrder?.id}`}
-        size="lg"
+        title="Order Details"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsModalVisible(false)}>Close</Button>,
+          <Button key="print" type="primary" onClick={() => window.print()}>Print Invoice</Button>
+        ]}
+        width={700}
       >
         {selectedOrder && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
-                <p className="font-medium">{selectedOrder.userFullName || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Order Date</p>
-                <p className="font-medium">{formatDate(selectedOrder.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p className="font-bold text-rose-gold-500">
-                  {formatPrice(selectedOrder.totalAmount)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Payment Status</p>
-                <p className="font-medium">{selectedOrder.paymentStatus || 'PENDING'}</p>
-              </div>
+            <Descriptions title="Order Info" bordered column={2}>
+              <Descriptions.Item label="Order ID">{selectedOrder.orderNumber}</Descriptions.Item>
+              <Descriptions.Item label="Date">{formatDate(selectedOrder.date)}</Descriptions.Item>
+              <Descriptions.Item label="User ID">{selectedOrder.userId}</Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color="blue">{selectedOrder.status}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Amount" span={2}>
+                <Text strong style={{ fontSize: 16 }}>{formatPrice(selectedOrder.total)}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Shipping Address" span={2}>
+                {renderAddress(selectedOrder.address)}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div>
+              <Title level={5}>Items</Title>
+              <Table
+                dataSource={selectedOrder.items}
+                columns={[
+                  { title: 'Item', dataIndex: 'productName', key: 'productName' },
+                  { title: 'Quantity', dataIndex: 'quantity', key: 'quantity' },
+                  { title: 'Price', dataIndex: 'price', key: 'price', render: p => formatPrice(p) },
+                  { title: 'Total', key: 'total', render: (_, r) => formatPrice(r.subtotal ?? (r.price * r.quantity)) }
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="id"
+              />
             </div>
-
-            <form onSubmit={handleSubmit(handleUpdateStatus)} className="space-y-4">
-              <Select
-                label="Update Order Status"
-                {...register('status', { required: true })}
-              >
-                <option value="PENDING">Pending</option>
-                <option value="PROCESSING">Processing</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="SHIPPED">Shipped</option>
-                <option value="DELIVERED">Delivered</option>
-                <option value="CANCELLED">Cancelled</option>
-              </Select>
-
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1"
-                >
-                  Close
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={submitting}
-                  className="flex-1"
-                >
-                  Update Status
-                </Button>
-              </div>
-            </form>
           </div>
         )}
       </Modal>

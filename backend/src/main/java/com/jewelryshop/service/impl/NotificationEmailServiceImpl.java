@@ -1,0 +1,306 @@
+package com.jewelryshop.service.impl;
+
+import com.jewelryshop.entity.Order;
+import com.jewelryshop.entity.User;
+import com.jewelryshop.email.EmailService;
+import com.jewelryshop.service.NotificationEmailService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class NotificationEmailServiceImpl implements NotificationEmailService {
+
+    private final EmailService emailService;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
+    @Value("${app.admin.email:${MAIL_FROM_EMAIL:${app.mail.from-email:}}}")
+    private String adminEmail;
+
+    @Value("${app.mail.from-name:Jewelry Shop}")
+    private String brandName;
+
+    @Value("${app.order.delivery-working-days:5}")
+    private int deliveryWorkingDays;
+
+    private static final DateTimeFormatter EMAIL_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
+
+    @Override
+    public void sendWelcomeEmail(User user) {
+        sendQuietly(user.getEmail(), "Welcome to " + brandName, "welcome-email", buildBaseModel(user));
+    }
+
+    @Override
+    public void sendVerificationEmail(User user, String verificationCode) {
+        Map<String, Object> model = buildBaseModel(user);
+        model.put("verificationCode", verificationCode);
+        sendRequired(user.getEmail(), "Verify your email - " + brandName, "verify-email", model);
+    }
+
+    @Override
+    public void sendForgotPasswordEmail(User user, String resetLink) {
+        Map<String, Object> model = buildBaseModel(user);
+        model.put("resetLink", resetLink);
+        sendQuietly(user.getEmail(), "Reset your password - " + brandName, "forgot-password", model);
+    }
+
+    @Override
+    public void sendPasswordResetSuccessEmail(User user) {
+        sendQuietly(user.getEmail(), "Password changed successfully", "password-reset-success", buildBaseModel(user));
+    }
+
+    @Override
+    public void sendOrderPlacedEmails(Order order) {
+        Map<String, Object> model = buildOrderModel(order);
+        String recipientEmail = order.getUser() != null ? order.getUser().getEmail() : null;
+        String subject = "Order confirmed - " + order.getOrderNumber();
+
+        dispatchAfterCommit("order confirmation", () ->
+            sendQuietly(recipientEmail, subject, "order-confirmation", model));
+        if (adminEmail != null && !adminEmail.isBlank()) {
+            dispatchAfterCommit("admin order confirmation", () ->
+                    sendQuietly(adminEmail, "New order received - " + order.getOrderNumber(), "order-confirmation", model));
+        }
+    }
+
+    @Override
+    public void sendOrderStatusEmail(Order order) {
+        Map<String, Object> model = buildOrderModel(order);
+        String template = switch (order.getOrderStatus()) {
+            case SHIPPED -> "order-shipped";
+            case DELIVERED -> "order-delivered";
+            case CANCELLED -> "order-cancelled";
+            default -> "order-confirmation";
+        };
+        sendQuietly(order.getUser().getEmail(), "Order update - " + order.getOrderNumber(), template, model);
+    }
+
+    @Override
+    public void sendCouponOfferEmail(String email, String couponTitle, String couponCode, String offerText) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("brandName", brandName);
+        model.put("couponTitle", couponTitle);
+        model.put("couponCode", couponCode);
+        model.put("offerText", offerText);
+        model.put("frontendUrl", frontendUrl);
+        sendQuietly(email, couponTitle, "coupon-offer", model);
+    }
+
+    @Override
+    public void sendContactAutoReply(String email, String customerName) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("brandName", brandName);
+        model.put("customerName", customerName);
+        sendQuietly(email, "We received your message", "welcome-email", model);
+    }
+
+    private Map<String, Object> buildBaseModel(User user) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("brandName", brandName);
+        model.put("customerName", user.getFullName());
+        model.put("frontendUrl", frontendUrl);
+        return model;
+    }
+
+    private Map<String, Object> buildOrderModel(Order order) {
+        Map<String, Object> model = new HashMap<>();
+        LocalDateTime placedAt = order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now();
+        LocalDateTime estimatedDelivery = addWorkingDays(placedAt, deliveryWorkingDays);
+        List<Map<String, Object>> orderItems = new ArrayList<>();
+        Map<String, Object> shippingAddress = parseShippingAddress(order.getAddressSnapshot());
+
+        order.getOrderItems().forEach(item -> {
+            Map<String, Object> itemModel = new HashMap<>();
+            itemModel.put("productName", item.getProduct() != null ? item.getProduct().getName() : "Product");
+            itemModel.put("quantity", item.getQuantity());
+            itemModel.put("price", item.getPrice());
+            itemModel.put("subtotal", item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            itemModel.put("variantName", item.getVariant() != null ? item.getVariant().getVariantName() : null);
+            orderItems.add(itemModel);
+        });
+
+        model.put("brandName", brandName);
+        model.put("customerName", order.getUser().getFullName());
+        model.put("orderNumber", order.getOrderNumber());
+        model.put("orderStatus", order.getOrderStatus().name());
+        model.put("paymentStatus", order.getPaymentStatus().name());
+        model.put("paymentMethod", order.getPaymentMethod().name());
+        model.put("totalAmount", order.getTotalAmount());
+        model.put("discountAmount", order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
+        model.put("finalAmount", order.getFinalAmount());
+        model.put("addressSnapshot", order.getAddressSnapshot());
+        model.put("shippingAddressName", shippingAddress.get("name"));
+        model.put("shippingAddressPhone", shippingAddress.get("phone"));
+        model.put("shippingAddressLines", shippingAddress.get("lines"));
+        model.put("shippingAddressSummary", shippingAddress.get("summary"));
+        model.put("placedOnDate", EMAIL_DATE_FORMATTER.format(placedAt));
+        model.put("estimatedDeliveryDate", EMAIL_DATE_FORMATTER.format(estimatedDelivery));
+        model.put("deliveryWorkingDays", deliveryWorkingDays);
+        model.put("deliveryEstimateText", "within " + deliveryWorkingDays + " working days from the order date");
+        model.put("orderItems", orderItems);
+        return model;
+    }
+
+    private LocalDateTime addWorkingDays(LocalDateTime start, int workingDays) {
+        LocalDateTime current = start;
+        int daysAdded = 0;
+
+        while (daysAdded < workingDays) {
+            current = current.plusDays(1);
+            DayOfWeek dayOfWeek = current.getDayOfWeek();
+            if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+                daysAdded++;
+            }
+        }
+
+        return current;
+    }
+
+    private void sendQuietly(String to, String subject, String templateName, Map<String, Object> model) {
+        try {
+            emailService.sendHtmlEmail(to, subject, templateName, model);
+        } catch (Exception ex) {
+            log.error("Failed to send {} email to {}", templateName, to, ex);
+        }
+    }
+
+    private void sendRequired(String to, String subject, String templateName, Map<String, Object> model) {
+        try {
+            emailService.sendHtmlEmail(to, subject, templateName, model);
+        } catch (Exception ex) {
+            log.error("Failed to send required {} email to {}", templateName, to, ex);
+            throw new IllegalStateException("Unable to send " + templateName.replace('-', ' ') + " email", ex);
+        }
+    }
+
+    private void dispatchAfterCommit(String description, Runnable task) {
+        Runnable guardedTask = () -> {
+            try {
+                task.run();
+            } catch (Exception ex) {
+                log.error("Failed to dispatch {} email after commit", description, ex);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    guardedTask.run();
+                }
+            });
+            return;
+        }
+
+        guardedTask.run();
+    }
+
+    private Map<String, Object> parseShippingAddress(String snapshot) {
+        Map<String, Object> address = new HashMap<>();
+        List<String> lines = new ArrayList<>();
+
+        if (snapshot == null || snapshot.isBlank()) {
+            address.put("name", "Customer");
+            address.put("phone", null);
+            address.put("lines", lines);
+            address.put("summary", "Shipping address was not available at the time of checkout.");
+            return address;
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(snapshot);
+            String name = textValue(root, "fullName", "name", "recipientName", "customerName");
+            String phone = textValue(root, "phone", "mobile", "contactNumber");
+            String addressLine1 = textValue(root, "addressLine1", "line1", "streetAddress", "street");
+            String addressLine2 = textValue(root, "addressLine2", "line2", "apartment", "suite");
+            String city = textValue(root, "city", "town");
+            String state = textValue(root, "state", "province", "region");
+            String postalCode = textValue(root, "postalCode", "pincode", "pinCode", "zipCode", "zip");
+            String country = textValue(root, "country");
+
+            if (!name.isBlank()) {
+                address.put("name", name);
+            } else {
+                address.put("name", "Customer");
+            }
+
+            if (!addressLine1.isBlank()) lines.add(addressLine1);
+            if (!addressLine2.isBlank()) lines.add(addressLine2);
+
+            String cityState = joinNonBlank(", ", city, state);
+            if (!cityState.isBlank()) lines.add(cityState);
+
+            String postalCountry = joinNonBlank(" • ", postalCode, country);
+            if (!postalCountry.isBlank()) lines.add(postalCountry);
+
+            address.put("phone", phone.isBlank() ? null : phone);
+            address.put("lines", lines);
+            address.put("summary", joinNonBlank(" • ", addressLine1, city, state, postalCode));
+            return address;
+        } catch (JsonProcessingException ex) {
+            log.warn("Unable to parse order address snapshot for email, using fallback formatting", ex);
+            return fallbackAddress(snapshot);
+        }
+    }
+
+    private Map<String, Object> fallbackAddress(String snapshot) {
+        Map<String, Object> address = new HashMap<>();
+        List<String> lines = new ArrayList<>();
+        lines.add(snapshot);
+        address.put("name", "Customer");
+        address.put("phone", null);
+        address.put("lines", lines);
+        address.put("summary", snapshot);
+        return address;
+    }
+
+    private String textValue(JsonNode node, String... keys) {
+        if (node == null || keys == null) {
+            return "";
+        }
+
+        for (String key : keys) {
+            JsonNode child = node.get(key);
+            if (child != null && !child.isNull()) {
+                String value = child.asText("").trim();
+                if (!value.isBlank()) {
+                    return value;
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private String joinNonBlank(String separator, String... values) {
+        List<String> parts = new ArrayList<>();
+        if (values != null) {
+            for (String value : values) {
+                if (value != null && !value.isBlank()) {
+                    parts.add(value.trim());
+                }
+            }
+        }
+        return String.join(separator, parts);
+    }
+}

@@ -1,9 +1,11 @@
 package com.jewelryshop.controller;
 
 import com.jewelryshop.dto.ApiResponse;
+import com.jewelryshop.dto.ProductDiscountRequest;
 import com.jewelryshop.dto.ProductRequest;
 import com.jewelryshop.dto.ProductResponse;
 import com.jewelryshop.service.ProductService;
+import com.jewelryshop.service.FileUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -25,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
+    private final FileUploadService fileUploadService;
 
     @GetMapping("/products")
     @Operation(summary = "Get all products with filters")
@@ -113,5 +120,52 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
+    }
+
+    @PutMapping("/admin/products/{id}/discount")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update product discount (Admin)")
+    public ResponseEntity<ApiResponse<ProductResponse>> updateDiscount(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductDiscountRequest request) {
+        ProductResponse product = productService.updateProductDiscount(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Discount updated successfully", product));
+    }
+
+    @DeleteMapping("/admin/products/{id}/discount")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Remove product discount (Admin)")
+    public ResponseEntity<ApiResponse<ProductResponse>> removeDiscount(@PathVariable Long id) {
+        ProductResponse product = productService.removeProductDiscount(id);
+        return ResponseEntity.ok(ApiResponse.success("Discount removed successfully", product));
+    }
+
+    @PostMapping("/admin/products/{id}/schedule-sale")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Schedule product sale (Admin)")
+    public ResponseEntity<ApiResponse<ProductResponse>> scheduleSale(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductDiscountRequest request) {
+        ProductResponse product = productService.scheduleProductSale(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Sale scheduled successfully", product));
+    }
+
+    @PostMapping("/admin/upload-image")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Upload product image (Admin)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> uploadImage(
+            @RequestParam("file") MultipartFile file) {
+        log.info("Uploading image file: {}", file.getOriginalFilename());
+        
+        String imageUrl = fileUploadService.uploadFile(file);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("imageUrl", imageUrl);
+        response.put("fileName", file.getOriginalFilename());
+        response.put("fileSize", file.getSize());
+        response.put("mimeType", file.getContentType());
+        
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Image uploaded successfully", response));
     }
 }

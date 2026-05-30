@@ -15,5 +15,7 @@ public class CategoryRequest {
     @Size(min = 2, max = 100, message = "Category name must be between 2 and 100 characters")
     private String name;
 
+    private String description;
+
     private Long parentId;
 }

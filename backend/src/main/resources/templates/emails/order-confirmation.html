@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order confirmed</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f2eb;font-family:Arial,Helvetica,sans-serif;color:#241c17;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#f7f2eb 0%,#efe3d1 100%);padding:32px 16px;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(36,28,23,0.12);">
+                <tr>
+                    <td style="background:linear-gradient(135deg,#16110f 0%,#3a2c22 55%,#9c773f 100%);padding:32px 36px;color:#f8f4ef;">
+                        <div style="font-size:12px;letter-spacing:4px;text-transform:uppercase;opacity:0.75;" th:text="${brandName}">Luxury Maison</div>
+                        <div style="font-size:32px;line-height:1.1;font-weight:800;margin-top:12px;">Order confirmed</div>
+                        <div style="margin-top:10px;font-size:15px;opacity:0.9;">We’ve received your order and started preparing it for shipment.</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:36px;line-height:1.75;font-size:15px;">
+                        <p style="margin:0 0 16px;">Hi <strong th:text="${customerName}">Customer</strong>,</p>
+                        <p style="margin:0 0 20px;">Your order <strong th:text="${orderNumber}">ORD-00000000</strong> has been placed successfully.</p>
+                        <div style="margin:0 0 20px;padding:18px;border:1px solid #eadfcd;border-radius:18px;background:#fffaf3;">
+                            <div style="display:block;">
+                                <div style="display:inline-block;min-width:140px;vertical-align:top;margin-right:18px;margin-bottom:14px;">
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:4px;">Placed on</div>
+                                    <div style="font-weight:800;" th:text="${placedOnDate}">30 May 2026</div>
+                                </div>
+                                <div style="display:inline-block;min-width:160px;vertical-align:top;margin-right:18px;margin-bottom:14px;">
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:4px;">Expected delivery</div>
+                                    <div style="font-weight:800;" th:text="${estimatedDeliveryDate}">06 Jun 2026</div>
+                                </div>
+                                <div style="display:inline-block;min-width:180px;vertical-align:top;margin-bottom:14px;">
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:4px;">Delivery estimate</div>
+                                    <div style="font-weight:800;" th:text="${deliveryEstimateText}">within 5 working days from the order date</div>
+                                </div>
+                            </div>
+                        </div>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:22px;">
+                            <thead>
+                            <tr style="text-align:left;border-bottom:1px solid #eadfcd;color:#7a6047;">
+                                <th style="padding:10px 0;font-weight:700;">Product</th>
+                                <th style="padding:10px 0;font-weight:700;">Qty</th>
+                                <th style="padding:10px 0;font-weight:700;">Price</th>
+                                <th style="padding:10px 0;font-weight:700;">Subtotal</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="item : ${orderItems}" style="border-bottom:1px solid #f0e6d8;">
+                                <td style="padding:12px 0;">
+                                    <span th:text="${item.productName}">Product</span>
+                                    <span th:if="${item.variantName != null}" style="display:block;color:#7a6b5b;font-size:13px;" th:text="${item.variantName}">Variant</span>
+                                </td>
+                                <td style="padding:12px 0;" th:text="${item.quantity}">1</td>
+                                <td style="padding:12px 0;">₹<span th:text="${item.price}">0.00</span></td>
+                                <td style="padding:12px 0;">₹<span th:text="${item.subtotal}">0.00</span></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-top:1px solid #eadfcd;">
+                            <tr>
+                                <td style="padding:12px 0;color:#7a6047;">Total</td>
+                                <td style="padding:12px 0;text-align:right;font-weight:700;">₹<span th:text="${totalAmount}">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 0;color:#7a6047;">Discount</td>
+                                <td style="padding:12px 0;text-align:right;font-weight:700;">₹<span th:text="${discountAmount}">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 0;color:#7a6047;">Final amount</td>
+                                <td style="padding:12px 0;text-align:right;font-weight:900;font-size:18px;">₹<span th:text="${finalAmount}">0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 0;color:#7a6047;">Payment status</td>
+                                <td style="padding:12px 0;text-align:right;font-weight:700;" th:text="${paymentStatus}">PENDING</td>
+                            </tr>
+                        </table>
+                        <div th:if="${shippingAddressLines != null}" style="margin-top:18px;padding:20px;border-radius:20px;background:linear-gradient(180deg,#fff8ef 0%,#f8efe1 100%);border:1px solid #e9ddc8;box-shadow:0 10px 24px rgba(36,28,23,0.06);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+                                <div>
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;font-weight:700;margin-bottom:5px;">Shipping address</div>
+                                    <div style="font-size:18px;font-weight:900;color:#241c17;line-height:1.3;" th:text="${shippingAddressName}">Customer Name</div>
+                                </div>
+                                <div style="padding:8px 12px;border-radius:999px;background:#16110f;color:#f8f4ef;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Verified delivery details</div>
+                            </div>
+                            <div style="padding:16px;border-radius:16px;background:#ffffff;border:1px solid #efe4d4;">
+                                <div style="line-height:1.75;color:#3c3128;font-size:14px;">
+                                    <div th:each="line : ${shippingAddressLines}" th:text="${line}">Address line</div>
+                                </div>
+                                <div th:if="${shippingAddressPhone != null and !#strings.isEmpty(shippingAddressPhone)}" style="margin-top:12px;padding-top:12px;border-top:1px solid #f0e6d8;font-size:13px;color:#7a6047;">
+                                    Phone: <span th:text="${shippingAddressPhone}">+91 00000 00000</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

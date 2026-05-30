@@ -1,6 +1,7 @@
 package com.jewelryshop.service;
 
 import com.jewelryshop.dto.ProductRequest;
+import com.jewelryshop.dto.ProductDiscountRequest;
 import com.jewelryshop.dto.ProductResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,4 +19,7 @@ public interface ProductService {
     Page<ProductResponse> searchProducts(String keyword, Pageable pageable);
     Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable);
     Page<ProductResponse> getFeaturedProducts(Pageable pageable);
+    ProductResponse updateProductDiscount(Long id, ProductDiscountRequest request);
+    ProductResponse removeProductDiscount(Long id);
+    ProductResponse scheduleProductSale(Long id, ProductDiscountRequest request);
 }

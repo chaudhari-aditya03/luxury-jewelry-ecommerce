@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isPlaceholderApiUrl = configuredApiUrl?.includes('your-backend.onrender.com');
+const API_BASE_URL = (!configuredApiUrl || isPlaceholderApiUrl)
+  ? (import.meta.env.DEV ? 'http://localhost:8080/api' : '')
+  : configuredApiUrl;
+
+if (import.meta.env.PROD && (!configuredApiUrl || isPlaceholderApiUrl)) {
+  console.error('Invalid VITE_API_URL in production. Set a real backend URL in Vercel environment variables.');
+}
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -12,7 +20,7 @@ const apiClient = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,6 +37,7 @@ apiClient.interceptors.response.use(
   (error) => {
     // Don't redirect on auth endpoints (login/register should show their own errors)
     if (error.response?.status === 401 && !error.config?.url?.includes('/auth/')) {
+      localStorage.removeItem('token');
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
       window.location.href = '/login';

@@ -48,5 +48,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                    @Param("maxPrice") Double maxPrice,
                                    Pageable pageable);
 
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId AND p.deletedAt IS NULL")
+    Long countByCategoryId(@Param("categoryId") Long categoryId);
+
     boolean existsBySku(String sku);
 }

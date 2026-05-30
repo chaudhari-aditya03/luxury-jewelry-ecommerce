@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f2eb;font-family:Arial,Helvetica,sans-serif;color:#241c17;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#f7f2eb 0%,#efe3d1 100%);padding:32px 16px;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(36,28,23,0.12);">
+                <tr>
+                    <td style="background:linear-gradient(135deg,#16110f 0%,#3a2c22 55%,#9c773f 100%);padding:32px 36px;color:#f8f4ef;">
+                        <div style="font-size:12px;letter-spacing:4px;text-transform:uppercase;opacity:0.75;" th:text="${brandName}">Luxury Maison</div>
+                        <div style="font-size:32px;line-height:1.1;font-weight:800;margin-top:12px;">Welcome to our store</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:36px;line-height:1.75;font-size:15px;">
+                        <p style="margin:0 0 16px;">Hi <strong th:text="${customerName}">Customer</strong>,</p>
+                        <p style="margin:0 0 18px;">Your account is ready. Explore our curated jewelry collection and discover timeless pieces designed to last.</p>
+                        <div style="padding:18px;border-radius:18px;background:#fff7ec;border:1px solid #eadfcd;margin-bottom:18px;">
+                            <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:6px;">What to expect</div>
+                            <div style="font-weight:700;line-height:1.7;">Personalized offers, faster checkout, and order updates sent directly to your inbox.</div>
+                        </div>
+                        <p style="margin:0;">
+                            <a th:href="${frontendUrl}" th:text="${frontendUrl}" style="display:inline-block;background:linear-gradient(135deg,#16110f 0%,#9c773f 100%);color:#fff;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:700;box-shadow:0 10px 24px rgba(31,26,23,0.2);">Visit the store</a>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

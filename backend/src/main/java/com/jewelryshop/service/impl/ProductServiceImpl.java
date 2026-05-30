@@ -6,6 +6,9 @@ import com.jewelryshop.exception.BadRequestException;
 import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.*;
 import com.jewelryshop.service.ProductService;
+import com.jewelryshop.service.ProductPricingService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +32,10 @@ public class ProductServiceImpl implements ProductService {
     private final ProductImageRepository productImageRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ReviewRepository reviewRepository;
+    private final ProductPricingService productPricingService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional
@@ -43,7 +50,11 @@ public class ProductServiceImpl implements ProductService {
         product.setSku(request.getSku() != null ? request.getSku() : generateSku());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
+        product.setOriginalPrice(request.getOriginalPrice() != null ? request.getOriginalPrice() : request.getPrice());
         product.setDiscountPrice(request.getDiscountPrice());
+        product.setDiscountPercentage(request.getDiscountPercentage());
+        product.setSaleStartDate(request.getSaleStartDate());
+        product.setSaleEndDate(request.getSaleEndDate());
         product.setStockQuantity(request.getStockQuantity());
         product.setCategory(category);
         product.setIsActive(request.getIsActive());
@@ -51,17 +62,48 @@ public class ProductServiceImpl implements ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        // Add images
-        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            List<ProductImage> images = new ArrayList<>();
-            for (int i = 0; i < request.getImageUrls().size(); i++) {
+        // Add images (supports both new images list and legacy imageUrls)
+        List<ProductImage> images = new ArrayList<>();
+        int imageCount = 0;
+        final int MAX_IMAGES = 4; // Limit to 4 images (1 main + 3 side views)
+        
+        // First, try to use the new images list (with isPrimary information)
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            for (var imageReq : request.getImages()) {
+                if (imageCount >= MAX_IMAGES) {
+                    log.warn("Maximum of {} images allowed. Skipping additional images.", MAX_IMAGES);
+                    break; // Enforce limit
+                }
+                if (imageReq.getImageUrl() != null && !imageReq.getImageUrl().isEmpty()) {
+                    ProductImage image = new ProductImage();
+                    image.setProduct(savedProduct);
+                    image.setImageUrl(imageReq.getImageUrl());
+                    image.setImageName(imageReq.getImageName());
+                    image.setImagePath(imageReq.getImagePath());
+                    image.setFileSize(imageReq.getFileSize());
+                    image.setMimeType(imageReq.getMimeType());
+                    image.setIsPrimary(imageReq.getIsPrimary() != null ? imageReq.getIsPrimary() : false);
+                    image.setUploadedAt(java.time.LocalDateTime.now());
+                    images.add(image);
+                    imageCount++;
+                }
+            }
+        } 
+        // Fall back to legacy imageUrls list
+        else if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            for (int i = 0; i < Math.min(request.getImageUrls().size(), MAX_IMAGES); i++) {
                 ProductImage image = new ProductImage();
                 image.setProduct(savedProduct);
                 image.setImageUrl(request.getImageUrls().get(i));
                 image.setIsPrimary(i == 0);
+                image.setUploadedAt(java.time.LocalDateTime.now());
                 images.add(image);
             }
+        }
+        
+        if (!images.isEmpty()) {
             productImageRepository.saveAll(images);
+            log.info("Saved {} images for product ID: {}", images.size(), savedProduct.getId());
         }
 
         // Add variants
@@ -97,7 +139,11 @@ public class ProductServiceImpl implements ProductService {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
+        product.setOriginalPrice(request.getOriginalPrice() != null ? request.getOriginalPrice() : request.getPrice());
         product.setDiscountPrice(request.getDiscountPrice());
+        product.setDiscountPercentage(request.getDiscountPercentage());
+        product.setSaleStartDate(request.getSaleStartDate());
+        product.setSaleEndDate(request.getSaleEndDate());
         product.setStockQuantity(request.getStockQuantity());
         product.setCategory(category);
         product.setIsActive(request.getIsActive());
@@ -105,18 +151,56 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
 
-        // Update images
-        if (request.getImageUrls() != null) {
-            productImageRepository.deleteByProductId(id);
-            List<ProductImage> images = new ArrayList<>();
-            for (int i = 0; i < request.getImageUrls().size(); i++) {
+        // Update images (supports both new images list and legacy imageUrls)
+        // IMPORTANT: Delete old images first and flush to avoid duplicates
+        productImageRepository.deleteByProductId(id);
+        entityManager.flush(); // Force delete to complete before inserts
+        
+        log.info("Deleted old images for product ID: {}", id);
+        
+        List<ProductImage> images = new ArrayList<>();
+        int imageCount = 0;
+        final int MAX_IMAGES = 4; // Limit to 4 images (1 main + 3 side views)
+        
+        // First, try to use the new images list (with isPrimary information)
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            for (var imageReq : request.getImages()) {
+                if (imageCount >= MAX_IMAGES) {
+                    log.warn("Maximum of {} images allowed. Skipping additional images.", MAX_IMAGES);
+                    break; // Enforce limit
+                }
+                if (imageReq.getImageUrl() != null && !imageReq.getImageUrl().isEmpty()) {
+                    ProductImage image = new ProductImage();
+                    image.setProduct(product);
+                    image.setImageUrl(imageReq.getImageUrl());
+                    image.setImageName(imageReq.getImageName());
+                    image.setImagePath(imageReq.getImagePath());
+                    image.setFileSize(imageReq.getFileSize());
+                    image.setMimeType(imageReq.getMimeType());
+                    image.setIsPrimary(imageReq.getIsPrimary() != null ? imageReq.getIsPrimary() : false);
+                    image.setUploadedAt(java.time.LocalDateTime.now());
+                    images.add(image);
+                    imageCount++;
+                }
+            }
+        } 
+        // Fall back to legacy imageUrls list
+        else if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            for (int i = 0; i < Math.min(request.getImageUrls().size(), MAX_IMAGES); i++) {
                 ProductImage image = new ProductImage();
                 image.setProduct(product);
                 image.setImageUrl(request.getImageUrls().get(i));
                 image.setIsPrimary(i == 0);
+                image.setUploadedAt(java.time.LocalDateTime.now());
                 images.add(image);
             }
+        }
+        
+        if (!images.isEmpty()) {
             productImageRepository.saveAll(images);
+            log.info("Saved {} new images for product ID: {}", images.size(), id);
+        } else {
+            log.warn("No images to save for product ID: {}", id);
         }
 
         // Update variants
@@ -239,7 +323,11 @@ public class ProductServiceImpl implements ProductService {
         response.setSku(product.getSku());
         response.setDescription(product.getDescription());
         response.setPrice(product.getPrice());
+        response.setOriginalPrice(product.getOriginalPrice());
+        response.setDiscountPercentage(product.getDiscountPercentage());
         response.setDiscountPrice(product.getDiscountPrice());
+        response.setSaleStartDate(product.getSaleStartDate());
+        response.setSaleEndDate(product.getSaleEndDate());
         response.setStockQuantity(product.getStockQuantity());
         response.setCategoryId(product.getCategory().getId());
         response.setCategoryName(product.getCategory().getName());
@@ -271,6 +359,41 @@ public class ProductServiceImpl implements ProductService {
         response.setReviewCount(reviewCount);
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse updateProductDiscount(Long id, ProductDiscountRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        product.setOriginalPrice(request.getOriginalPrice());
+        product.setDiscountPercentage(request.getDiscountPercentage());
+        product.setSaleStartDate(request.getSaleStartDate());
+        product.setSaleEndDate(request.getSaleEndDate());
+        product.setDiscountPrice(productPricingService.calculateDiscountPrice(request.getOriginalPrice(), request.getDiscountPercentage()));
+        productRepository.save(product);
+        return getProductById(id);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse removeProductDiscount(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        product.setDiscountPercentage(null);
+        product.setDiscountPrice(null);
+        product.setSaleStartDate(null);
+        product.setSaleEndDate(null);
+        productRepository.save(product);
+        return getProductById(id);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse scheduleProductSale(Long id, ProductDiscountRequest request) {
+        return updateProductDiscount(id, request);
     }
 
     private String generateSku() {

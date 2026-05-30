@@ -20,8 +20,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Page<Order> findByUserId(Long userId, Pageable pageable);
 
-    @Query("SELECT o FROM Order o WHERE o.user.id = :userId ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
     List<Order> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+        @Query("SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.orderItems oi " +
+            "LEFT JOIN FETCH oi.product p " +
+            "LEFT JOIN FETCH oi.variant " +
+            "WHERE o.user.id = :userId AND o.deletedAt IS NULL " +
+            "ORDER BY o.createdAt DESC")
+        List<Order> findByUserIdWithDetailsOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+    @Query("SELECT o FROM Order o WHERE o.id = :orderId AND o.user.id = :userId AND o.deletedAt IS NULL")
+    Optional<Order> findByIdAndUserIdAndDeletedAtIsNull(@Param("orderId") Long orderId, @Param("userId") Long userId);
 
     Page<Order> findByOrderStatus(Order.OrderStatus status, Pageable pageable);
 
@@ -36,6 +47,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     BigDecimal getRevenueByDateRange(@Param("startDate") LocalDateTime startDate, 
                                       @Param("endDate") LocalDateTime endDate);
 
-    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.orderItems WHERE o.id = :id")
+    @Query("SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.orderItems oi " +
+            "LEFT JOIN FETCH oi.product p " +
+            "LEFT JOIN FETCH oi.variant " +
+            "WHERE o.id = :id AND o.deletedAt IS NULL")
     Optional<Order> findByIdWithItems(@Param("id") Long id);
+
+        @Query(value = "SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.orderItems oi " +
+            "LEFT JOIN FETCH oi.product p " +
+            "LEFT JOIN FETCH oi.variant " +
+            "WHERE o.deletedAt IS NULL",
+            countQuery = "SELECT COUNT(o) FROM Order o WHERE o.deletedAt IS NULL")
+    Page<Order> findAllWithDetails(Pageable pageable);
 }

@@ -15,6 +15,5 @@ public class CreatePaymentRequest {
     @NotNull(message = "Order ID is required")
     private Long orderId;
 
-    @NotNull(message = "Amount is required")
     private BigDecimal amount;
 }

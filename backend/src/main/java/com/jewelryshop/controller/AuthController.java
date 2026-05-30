@@ -22,12 +22,12 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    @Operation(summary = "Register a new user")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse authResponse = authService.register(request);
+    @PostMapping({"/register", "/send-otp"})
+    @Operation(summary = "Start registration by sending an OTP to the user's email")
+    public ResponseEntity<ApiResponse<VerificationResponseDTO>> register(@Valid @RequestBody RegisterRequest request) {
+        VerificationResponseDTO response = authService.sendOtp(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("User registered successfully", authResponse));
+                .body(ApiResponse.success("Verification code sent successfully. Please check your email.", response));
     }
 
     @PostMapping("/login")

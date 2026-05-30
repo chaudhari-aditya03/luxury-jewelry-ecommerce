@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "products", indexes = {
@@ -39,8 +40,20 @@ public class Product {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "original_price", precision = 10, scale = 2)
+    private BigDecimal originalPrice;
+
+    @Column(name = "discount_percentage", precision = 5, scale = 2)
+    private BigDecimal discountPercentage;
+
     @Column(name = "discount_price", precision = 10, scale = 2)
     private BigDecimal discountPrice;
+
+    @Column(name = "sale_start_date")
+    private LocalDateTime saleStartDate;
+
+    @Column(name = "sale_end_date")
+    private LocalDateTime saleEndDate;
 
     @Column(name = "stock_quantity")
     private Integer stockQuantity = 0;
@@ -56,6 +69,7 @@ public class Product {
     private Boolean isFeatured = false;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     private List<ProductImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
