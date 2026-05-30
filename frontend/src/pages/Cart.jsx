@@ -7,7 +7,7 @@ import {
 import { DeleteOutlined, ShoppingCartOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import MainLayout from '../layouts/MainLayout';
 import { formatPrice, getImageUrl } from '../utils/helpers';
-import { cartService } from '../services';
+import { cartService, couponService } from '../services';
 import { useAuth } from '../context/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
@@ -18,6 +18,7 @@ const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [totals, setTotals] = useState({ subtotal: 0, totalItems: 0 });
 
   useEffect(() => {
@@ -26,6 +27,17 @@ const CartPage = () => {
       return;
     }
     fetchCart();
+
+    const savedCoupon = localStorage.getItem('luxury-maison-applied-coupon');
+    if (savedCoupon) {
+      try {
+        const parsedCoupon = JSON.parse(savedCoupon);
+        setCouponCode(parsedCoupon?.code || '');
+        setAppliedCoupon(parsedCoupon);
+      } catch {
+        localStorage.removeItem('luxury-maison-applied-coupon');
+      }
+    }
   }, [isAuthenticated]);
 
   const fetchCart = async () => {
@@ -75,6 +87,32 @@ const CartPage = () => {
     } catch (error) {
       message.error(error.response?.data?.message || 'Failed to update quantity');
     }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      message.error('Enter a coupon code');
+      return;
+    }
+
+    try {
+      const response = await couponService.applyCoupon(couponCode.trim(), subtotal);
+      const couponData = response.data?.data;
+      setAppliedCoupon(couponData);
+      localStorage.setItem('luxury-maison-applied-coupon', JSON.stringify(couponData));
+      message.success(couponData?.message || 'Coupon applied successfully');
+    } catch (error) {
+      setAppliedCoupon(null);
+      localStorage.removeItem('luxury-maison-applied-coupon');
+      message.error(error.response?.data?.message || 'Invalid or expired coupon');
+    }
+  };
+
+  const handleClearCoupon = () => {
+    setCouponCode('');
+    setAppliedCoupon(null);
+    localStorage.removeItem('luxury-maison-applied-coupon');
+    message.success('Coupon removed');
   };
 
   const columns = [
@@ -130,8 +168,9 @@ const CartPage = () => {
   ];
 
   const subtotal = totals.subtotal;
+  const couponDiscount = Number(appliedCoupon?.discountAmount ?? 0);
   const tax = subtotal * 0.18; // 18% GST Example
-  const total = subtotal + tax;
+  const total = Math.max(0, subtotal - couponDiscount) + tax;
 
   if (!isLoading && cartItems.length === 0) {
     return (
@@ -219,11 +258,18 @@ const CartPage = () => {
 
             <Col xs={24} lg={8}>
               <Card title="Order Summary" variant="borderless" style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                <Space direction="vertical" style={{ width: '100%' }} size="large">
+                <Space orientation="vertical" style={{ width: '100%' }} size="large">
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text>Subtotal</Text>
                     <Text strong>{formatPrice(subtotal)}</Text>
                   </div>
+                  {appliedCoupon ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text>Coupon ({appliedCoupon.code})</Text>
+                      <Text type="success">-{formatPrice(couponDiscount)}</Text>
+                    </div>
+                  ) : null}
+
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text>Tax (18% GST)</Text>
                     <Text strong>{formatPrice(tax)}</Text>
@@ -240,9 +286,21 @@ const CartPage = () => {
                     <Title level={4} style={{ color: '#C6A769' }}>{formatPrice(total)}</Title>
                   </div>
 
+                  {appliedCoupon ? (
+                    <div style={{ borderRadius: 12, background: '#faf6ea', padding: 12 }}>
+                      <Text strong>{appliedCoupon.code}</Text>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                        {appliedCoupon.message || 'Coupon applied successfully'}
+                      </div>
+                      <Button type="link" onClick={handleClearCoupon} style={{ padding: 0, height: 'auto' }}>
+                        Remove coupon
+                      </Button>
+                    </div>
+                  ) : null}
+
                   <div className="stacked-actions">
                     <Input placeholder="Coupon Code" value={couponCode} onChange={e => setCouponCode(e.target.value)} />
-                    <Button onClick={() => message.info('Invalid Coupon')}>Apply</Button>
+                    <Button onClick={handleApplyCoupon}>Apply</Button>
                   </div>
 
                   <Button type="primary" block size="large" onClick={() => navigate('/checkout')}>

@@ -9,7 +9,8 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
-
+main/resources/demo
+main/resources/demo2
 ### Spring Boot ###
 *.log
 *.gz

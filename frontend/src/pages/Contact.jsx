@@ -4,8 +4,8 @@ import { Mail, MapPin, Phone, Sparkles } from 'lucide-react';
 import MainLayout from '../layouts/MainLayout';
 
 const contactPoints = [
-  { icon: Phone, label: 'Phone', value: '+91 98765 43210' },
-  { icon: Mail, label: 'Email', value: 'hello@jewelrystore.com' },
+  { icon: Phone, label: 'Phone', value: '+91 7709648063' },
+  { icon: Mail, label: 'Email', value: 'aditya@jewelrystore.com' },
   { icon: MapPin, label: 'Studio', value: '123 Luxury Avenue, Mumbai' },
 ];
 
@@ -23,7 +23,7 @@ const ContactPage = () => {
                   Reach out for gifting help, order questions, size guidance, or custom requests. The layout stays compact on mobile and elegant on desktop.
                 </p>
                 <div className="stacked-actions mt-8">
-                  <a href="mailto:hello@jewelrystore.com" className="btn-primary inline-flex items-center justify-center no-underline">
+                  <a href="mailto:aditya@jewelrystore.com" className="btn-primary inline-flex items-center justify-center no-underline">
                     Email Us
                   </a>
                   <Link to="/shop" className="btn-secondary inline-flex items-center justify-center no-underline">

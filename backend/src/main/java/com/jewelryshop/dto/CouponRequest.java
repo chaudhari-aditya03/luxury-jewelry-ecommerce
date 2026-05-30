@@ -25,12 +25,23 @@ public class CouponRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Discount value must be greater than 0")
     private BigDecimal discountValue;
 
+    @DecimalMin(value = "0.0", message = "Maximum discount amount cannot be negative")
+    private BigDecimal maxDiscountAmount;
+
     @DecimalMin(value = "0.0", message = "Minimum order amount cannot be negative")
     private BigDecimal minOrderAmount;
+
+    private LocalDate startDate;
 
     @NotNull(message = "Expiry date is required")
     @Future(message = "Expiry date must be in the future")
     private LocalDate expiryDate;
 
     private Boolean isActive = true;
+
+    private Coupon.CouponType couponType = Coupon.CouponType.PUBLIC;
+
+    private Boolean oneTimePerUser = false;
+
+    private String description;
 }

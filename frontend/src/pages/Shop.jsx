@@ -79,6 +79,7 @@ const ShopPage = () => {
       const mappedProducts = content.map((product) => ({
         id: product.id,
         name: product.name,
+        description: product.description,
         price: Number(product.discountPrice ?? product.price ?? 0),
         originalPrice: Number(product.price ?? 0),
         discountPercentage:
@@ -90,9 +91,10 @@ const ShopPage = () => {
         category: product.categoryName || 'Jewelry',
         stockQuantity: product.stockQuantity ?? 0,
         isFeatured: product.isFeatured ?? false,
+        isActive: product.isActive ?? true,
         saleStartDate: product.saleStartDate,
         saleEndDate: product.saleEndDate,
-        isActive: product.isActive,
+        variants: product.variants || [],
         image: getImageUrl(product.images?.find((img) => img.isPrimary)?.imageUrl || product.images?.[0]?.imageUrl),
       }));
 

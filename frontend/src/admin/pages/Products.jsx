@@ -39,8 +39,40 @@ const computeDiscountPrice = (price, discountPercentage) => {
 
 const emptyVariant = {
   variantName: '',
+  size: '',
+  color: '',
   additionalPrice: 0,
   stockQuantity: 0,
+};
+
+const variantSeparator = ' | ';
+
+const buildVariantName = (variant) => {
+  const baseName = String(variant?.variantName || '').trim();
+  const size = String(variant?.size || '').trim();
+  const color = String(variant?.color || '').trim();
+
+  return [baseName, size ? `Size: ${size}` : null, color ? `Color: ${color}` : null]
+    .filter(Boolean)
+    .join(variantSeparator);
+};
+
+const parseVariantFields = (variantName) => {
+  const rawName = String(variantName || '').trim();
+  if (!rawName.includes(variantSeparator)) {
+    return { variantName: rawName, size: '', color: '' };
+  }
+
+  const parts = rawName.split(variantSeparator).map((part) => part.trim()).filter(Boolean);
+  const baseName = parts[0] || rawName;
+  const sizePart = parts.find((part) => /^Size:/i.test(part));
+  const colorPart = parts.find((part) => /^Color:/i.test(part));
+
+  return {
+    variantName: baseName,
+    size: sizePart ? sizePart.replace(/^Size:\s*/i, '') : '',
+    color: colorPart ? colorPart.replace(/^Color:\s*/i, '') : '',
+  };
 };
 
 const AdminProducts = () => {
@@ -80,6 +112,13 @@ const AdminProducts = () => {
     fetchProducts(pagination.current - 1, pagination.pageSize);
     fetchCategories();
   }, []);
+
+  const handleFormValuesChange = (_, allValues) => {
+    const calculatedPrice = computeDiscountPrice(allValues.originalPrice || allValues.price, allValues.discountPercentage);
+    if (Number(allValues.discountPrice || 0) !== Number(calculatedPrice || 0)) {
+      form.setFieldsValue({ discountPrice: calculatedPrice });
+    }
+  };
 
   const fetchProducts = async (page, size) => {
     setLoading(true);
@@ -155,7 +194,14 @@ const AdminProducts = () => {
         isFeatured: product.isFeatured,
         isActive: product.isActive ?? true,
         saleWindow: saleDates,
-        variants: product.variants && product.variants.length > 0 ? product.variants : [emptyVariant],
+        variants: product.variants && product.variants.length > 0
+          ? product.variants.map((variant) => ({
+              ...emptyVariant,
+              ...parseVariantFields(variant.variantName),
+              additionalPrice: Number(variant.additionalPrice || 0),
+              stockQuantity: Number(variant.stockQuantity || 0),
+            }))
+          : [emptyVariant],
       });
       setFileList(
         product.images?.map((url, index) => ({
@@ -212,9 +258,9 @@ const AdminProducts = () => {
       const saleWindow = values.saleWindow || [];
       const discountPrice = values.discountPrice ?? computeDiscountPrice(values.originalPrice || values.price, values.discountPercentage);
       const variants = (values.variants || [])
-        .filter(variant => variant && variant.variantName)
+        .filter((variant) => variant && (variant.variantName || variant.size || variant.color))
         .map(variant => ({
-          variantName: variant.variantName,
+          variantName: buildVariantName(variant),
           additionalPrice: Number(variant.additionalPrice || 0),
           stockQuantity: Number(variant.stockQuantity || 0),
         }));
@@ -403,6 +449,25 @@ const AdminProducts = () => {
               </Col>
             ))}
           </Row>
+
+          <Row gutter={[16, 16]} className="mt-4">
+            <Col xs={24} md={12}>
+              <Card className="page-card h-full border-0 shadow-none">
+                <p className="text-sm font-semibold text-luxury">Live review metrics</p>
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  Average rating and review count are computed from customer reviews and shown in the storefront.
+                </p>
+              </Card>
+            </Col>
+            <Col xs={24} md={12}>
+              <Card className="page-card h-full border-0 shadow-none">
+                <p className="text-sm font-semibold text-luxury">Variant schema</p>
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  Each variant stores a display label, size, color, additional price, and its own stock quantity.
+                </p>
+              </Card>
+            </Col>
+          </Row>
         </div>
 
         <Card className="page-card overflow-hidden border-0 shadow-[0_18px_45px_rgba(17,17,17,0.06)]">
@@ -448,7 +513,7 @@ const AdminProducts = () => {
             </div>
           </div>
 
-          <Form form={form} layout="vertical" className="space-y-6">
+          <Form form={form} layout="vertical" className="space-y-6" onValuesChange={handleFormValuesChange}>
             <Row gutter={16}>
               <Col xs={24} lg={16}>
                 <Form.Item name="name" label="Product Name" rules={[{ required: true, message: 'Product name is required' }]}>
@@ -508,6 +573,7 @@ const AdminProducts = () => {
                     style={{ width: '100%' }}
                     min={0}
                     placeholder="Auto-calculated if empty"
+                    disabled
                     formatter={value => `₹ ${String(value || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}
                     parser={value => value.replace(/\₹\s?|(,*)/g, '')}
                   />
@@ -570,12 +636,22 @@ const AdminProducts = () => {
                             <Input placeholder="18K Yellow Gold" />
                           </Form.Item>
                         </Col>
-                        <Col xs={12} md={6}>
+                        <Col xs={12} md={4}>
+                          <Form.Item {...restField} name={[name, 'size']} label="Size">
+                            <Input placeholder="M / 6 / 18" />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={12} md={4}>
+                          <Form.Item {...restField} name={[name, 'color']} label="Color">
+                            <Input placeholder="Yellow Gold" />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={12} md={4}>
                           <Form.Item {...restField} name={[name, 'additionalPrice']} label="Additional Price">
                             <InputNumber style={{ width: '100%' }} min={0} />
                           </Form.Item>
                         </Col>
-                        <Col xs={12} md={6}>
+                        <Col xs={12} md={4}>
                           <Form.Item {...restField} name={[name, 'stockQuantity']} label="Stock">
                             <InputNumber style={{ width: '100%' }} min={0} />
                           </Form.Item>

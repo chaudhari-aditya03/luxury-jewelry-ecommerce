@@ -13,12 +13,13 @@
     </div>
     <div style="background:#fff;padding:32px;border-radius:0 0 18px 18px;line-height:1.8;font-size:15px;">
         <p>Hi <strong th:text="${customerName}">Customer</strong>,</p>
-        <p>Thank you for joining us. Click the button below to verify your email address.</p>
-        <p style="margin:28px 0;">
-            <a th:href="${verificationLink}" style="display:inline-block;background:#8b6b3e;color:#fff;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:700;">Verify Email</a>
-        </p>
-        <p>If the button does not work, copy this link:</p>
-        <p><a th:href="${verificationLink}" th:text="${verificationLink}">verification link</a></p>
+        <p>Thank you for registering. Use the verification code below to activate your account.</p>
+        <div style="margin:28px 0;padding:20px 24px;background:#f8f3ea;border:1px dashed #8b6b3e;border-radius:16px;text-align:center;">
+            <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#8b6b3e;font-weight:700;">Your OTP</div>
+            <div style="font-size:34px;font-weight:800;letter-spacing:8px;margin-top:8px;color:#1f1a17;" th:text="${verificationCode}">123456</div>
+        </div>
+        <p>Enter this code on the registration verification page. It expires in <span th:text="${validityMinutes}">5</span> minutes.</p>
+        <p th:if="${expiryTime != null}">Expiry time: <strong th:text="${#temporals.format(expiryTime, 'hh:mm a, dd MMM yyyy')}">10:15 AM, 30 May 2026</strong></p>
     </div>
 </div>
 </body>

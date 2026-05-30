@@ -22,6 +22,37 @@ const AdminOrders = () => {
     fetchOrders(1, pagination.pageSize);
   }, []);
 
+  const renderAddress = (addr) => {
+    if (!addr) return '-';
+
+    let obj = addr;
+    if (typeof addr === 'string') {
+      try {
+        obj = JSON.parse(addr);
+      } catch (e) {
+        // not JSON, return raw string
+        return <div style={{ whiteSpace: 'pre-wrap' }}>{addr}</div>;
+      }
+    }
+
+    if (typeof obj === 'object' && obj !== null) {
+      const parts = [];
+      if (obj.fullName) parts.push(<div key="name" style={{ fontWeight: 600 }}>{obj.fullName}</div>);
+      const line1 = obj.addressLine1 || '';
+      const line2 = obj.addressLine2 ? `, ${obj.addressLine2}` : '';
+      if (line1 || line2) parts.push(<div key="addr">{`${line1}${line2}`}</div>);
+      const cityState = [obj.city, obj.state].filter(Boolean).join(', ');
+      const postal = obj.postalCode ? ` ${obj.postalCode}` : '';
+      if (cityState || postal) parts.push(<div key="city">{`${cityState}${postal}`.trim()}</div>);
+      if (obj.country) parts.push(<div key="country">{obj.country}</div>);
+      if (obj.phone) parts.push(<div key="phone">{obj.phone}</div>);
+
+      return <div style={{ lineHeight: 1.4 }}>{parts}</div>;
+    }
+
+    return <div>{String(obj)}</div>;
+  };
+
   const fetchOrders = async (page, pageSize) => {
     setLoading(true);
     try {
@@ -195,7 +226,7 @@ const AdminOrders = () => {
                 <Text strong style={{ fontSize: 16 }}>{formatPrice(selectedOrder.total)}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Shipping Address" span={2}>
-                {selectedOrder.address}
+                {renderAddress(selectedOrder.address)}
               </Descriptions.Item>
             </Descriptions>
 

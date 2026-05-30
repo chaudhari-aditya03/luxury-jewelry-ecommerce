@@ -20,6 +20,7 @@ const ProductCard = ({
   const {
     id = 1,
     name = 'Product Name',
+    description = '',
     price = 0,
     originalPrice = 0,
     discountPercentage = 0,
@@ -29,8 +30,10 @@ const ProductCard = ({
     category = 'Jewelry',
     stockQuantity = 0,
     isFeatured = false,
+    isActive = true,
     saleStartDate = null,
     saleEndDate = null,
+    variants = [],
   } = product || {};
 
   const resolvedOriginalPrice = Number(originalPrice || 0);
@@ -48,6 +51,8 @@ const ProductCard = ({
   const saleWindowLabel = saleStartDate && saleEndDate
     ? `${new Date(saleStartDate).toLocaleDateString('en-IN')} - ${new Date(saleEndDate).toLocaleDateString('en-IN')}`
     : null;
+  const variantCount = Array.isArray(variants) ? variants.length : 0;
+  const descriptionSnippet = String(description || '').trim();
 
   const handleAddToCart = (e) => {
     e.preventDefault(); // Prevent Link navigation
@@ -106,6 +111,11 @@ const ProductCard = ({
                 <Sparkles className="h-3.5 w-3.5" /> Featured
               </span>
             ) : null}
+            {!isActive ? (
+              <span className="inline-flex items-center rounded-full bg-[#fee2e2] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#b91c1c] shadow-sm">
+                Inactive
+              </span>
+            ) : null}
           </div>
 
           <img
@@ -153,6 +163,12 @@ const ProductCard = ({
             {name}
           </h3>
 
+            {descriptionSnippet ? (
+              <p className="line-clamp-2 text-sm leading-6 text-[#6b7280]">
+                {descriptionSnippet}
+              </p>
+            ) : null}
+
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-wrap items-end gap-2">
               {resolvedOriginalPrice > resolvedPrice ? (
@@ -171,6 +187,7 @@ const ProductCard = ({
           <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8f8f8f]">
             <span>{stockQuantity > 0 ? `${stockQuantity} in stock` : 'Sold out'}</span>
             {saleWindowLabel ? <span className="rounded-full bg-[#f8f2e5] px-2 py-1 text-[#977132]">{saleWindowLabel}</span> : null}
+            {variantCount > 0 ? <span className="rounded-full bg-[#f6f2eb] px-2 py-1 text-[#6b7280]">{variantCount} variants</span> : null}
           </div>
 
           <div className="mt-auto space-y-2">

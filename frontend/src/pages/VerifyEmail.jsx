@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, message, Spin } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined, MailOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Input, message, Spin } from 'antd';
+import { CheckCircleOutlined, CloseCircleOutlined, MailOutlined } from '@ant-design/icons';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { authService } from '../services';
@@ -9,42 +9,82 @@ import { useAuth } from '../context/AuthContext';
 const VerifyEmailPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { pendingVerificationEmail, setPendingVerificationEmail } = useAuth();
-  const [status, setStatus] = useState('loading');
-  const [email, setEmail] = useState('');
-  const [messageText, setMessageText] = useState('Verifying your email...');
+  const { pendingVerificationEmail, setPendingVerificationEmail, completeExternalLogin } = useAuth();
+  const [status, setStatus] = useState('idle');
+  const [emailInput, setEmailInput] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [messageText, setMessageText] = useState('Enter the 6-digit code we emailed you after registration.');
+  const [welcomeCoupon, setWelcomeCoupon] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(60);
 
-  const token = searchParams.get('token');
   const queryEmail = searchParams.get('email');
-  const resolvedEmail = useMemo(() => queryEmail || pendingVerificationEmail || email, [queryEmail, pendingVerificationEmail, email]);
+  const resolvedEmail = useMemo(
+    () => emailInput || queryEmail || pendingVerificationEmail,
+    [emailInput, queryEmail, pendingVerificationEmail]
+  );
 
   useEffect(() => {
-    if (!token) {
-      setStatus('idle');
-      setMessageText('Enter your email address to resend the verification link.');
+    if (!emailInput && (queryEmail || pendingVerificationEmail)) {
+      setEmailInput(queryEmail || pendingVerificationEmail);
+    }
+  }, [emailInput, queryEmail, pendingVerificationEmail]);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [resendSeconds]);
+
+  const verify = async () => {
+    if (!resolvedEmail) {
+      message.error('Please enter the email used for registration.');
       return;
     }
 
-    const verify = async () => {
-      try {
-        setStatus('loading');
-        const response = await authService.verifyEmail(token);
-        const verifiedEmail = response.data?.data?.email || queryEmail || pendingVerificationEmail;
-        if (verifiedEmail) {
-          setEmail(verifiedEmail);
-          setPendingVerificationEmail('');
-          localStorage.removeItem('pendingVerificationEmail');
-        }
-        setStatus('success');
-        setMessageText(response.data?.message || 'Email verified successfully');
-      } catch (error) {
-        setStatus('error');
-        setMessageText(error?.response?.data?.message || 'Verification link is invalid or expired.');
-      }
-    };
+    if (!otpCode.trim()) {
+      message.error('Please enter the 6-digit verification code.');
+      return;
+    }
 
-    void verify();
-  }, [token, queryEmail, pendingVerificationEmail, setPendingVerificationEmail]);
+    try {
+      setVerifying(true);
+      const response = await authService.verifyOtp(resolvedEmail, otpCode.trim());
+      const authData = response.data?.data;
+      const verifiedEmail = authData?.user?.email || resolvedEmail;
+
+      setEmailInput(verifiedEmail);
+      setPendingVerificationEmail('');
+      localStorage.removeItem('pendingVerificationEmail');
+
+      if (authData?.token) {
+        await completeExternalLogin(authData.token);
+      }
+
+      if (authData?.welcomeCouponCode) {
+        setWelcomeCoupon({
+          code: authData.welcomeCouponCode,
+          message: authData.welcomeCouponMessage,
+        });
+      }
+
+      setStatus('success');
+      setMessageText(response.data?.message || 'Email verified successfully');
+      message.success(response.data?.message || 'Email verified successfully');
+    } catch (error) {
+      setStatus('error');
+      setMessageText(error?.response?.data?.message || 'Verification code is invalid or expired.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const resendVerification = async () => {
     if (!resolvedEmail) {
@@ -53,14 +93,20 @@ const VerifyEmailPage = () => {
     }
 
     try {
-      await authService.resendVerificationEmail(resolvedEmail);
-      message.success('Verification email sent again.');
+      setResending(true);
+      await authService.resendOtp(resolvedEmail);
+      message.success('Verification code sent again.');
       setStatus('idle');
-      setMessageText('We sent another verification email. Check your inbox.');
+      setMessageText('We sent another verification code. Check your inbox.');
+      setResendSeconds(60);
     } catch (error) {
       message.error(error?.response?.data?.message || 'Unable to resend verification email.');
+    } finally {
+      setResending(false);
     }
   };
+
+  const isOtpComplete = otpCode.trim().length === 6;
 
   return (
     <div className="auth-shell">
@@ -82,7 +128,7 @@ const VerifyEmailPage = () => {
             <span className="block text-gold">account access.</span>
           </h2>
           <p className="max-w-md text-lg leading-8 text-white/72">
-            Confirm your email to activate your account and continue with your order history, wishlist, and checkout.
+            Confirm your email to activate your account and continue with your orders, wishlist, and checkout.
           </p>
         </div>
       </aside>
@@ -114,8 +160,15 @@ const VerifyEmailPage = () => {
               <p className="page-eyebrow">Verified</p>
               <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Email verified</h2>
               <p className="mt-2 text-sm leading-7 text-muted">{messageText}</p>
-              <Button type="primary" className="mt-6 !h-12 !rounded-full !border-0" onClick={() => navigate('/login')}>
-                Continue to login
+              {welcomeCoupon ? (
+                <div className="mx-auto mt-6 max-w-md rounded-3xl border border-[#eadfca] bg-[#faf6ea] p-5 text-left">
+                  <p className="text-xs uppercase tracking-[0.28em] text-gold">Welcome reward</p>
+                  <h3 className="mt-2 text-xl font-semibold text-charcoal-700">{welcomeCoupon.code}</h3>
+                  <p className="mt-2 text-sm leading-7 text-muted">{welcomeCoupon.message}</p>
+                </div>
+              ) : null}
+              <Button type="primary" className="mt-6 !h-12 !rounded-full !border-0" onClick={() => navigate('/shop')}>
+                Continue to shop
               </Button>
             </div>
           ) : status === 'error' ? (
@@ -124,17 +177,34 @@ const VerifyEmailPage = () => {
                 <CloseCircleOutlined style={{ fontSize: 32 }} />
               </div>
               <p className="page-eyebrow">Verification failed</p>
-              <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Link expired</h2>
+              <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Code expired or invalid</h2>
               <p className="mt-2 text-sm leading-7 text-muted">{messageText}</p>
               <div className="mt-6 space-y-4">
-                <input
+                <Input
                   value={resolvedEmail}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full rounded-full border border-[#eadfca] px-4 py-3 outline-none"
+                  className="!h-12 !rounded-full"
                 />
-                <Button type="primary" block className="!h-12 !rounded-full !border-0" onClick={resendVerification}>
-                  Resend verification email
+                <Input
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  inputMode="numeric"
+                  className="!h-12 !rounded-full"
+                />
+                <Button type="primary" block className="!h-12 !rounded-full !border-0" onClick={verify} loading={verifying} disabled={verifying || !isOtpComplete}>
+                  Verify email
+                </Button>
+                <Button
+                  block
+                  className="!h-12 !rounded-full"
+                  onClick={resendVerification}
+                  loading={resending}
+                  disabled={resending || resendSeconds > 0}
+                >
+                  {resendSeconds > 0 ? `Resend available in ${resendSeconds}s` : 'Resend verification code'}
                 </Button>
               </div>
             </div>
@@ -144,17 +214,34 @@ const VerifyEmailPage = () => {
                 <MailOutlined style={{ fontSize: 28 }} />
               </div>
               <p className="page-eyebrow">Verify account</p>
-              <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Please verify your email</h2>
+              <h2 className="mt-3 text-3xl font-semibold text-charcoal-700">Enter verification code</h2>
               <p className="mt-2 text-sm leading-7 text-muted">{messageText}</p>
               <div className="mt-6 space-y-4">
-                <input
+                <Input
                   value={resolvedEmail}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full rounded-full border border-[#eadfca] px-4 py-3 outline-none"
+                  className="!h-12 !rounded-full"
                 />
-                <Button type="primary" block className="!h-12 !rounded-full !border-0" onClick={resendVerification}>
-                  Resend verification email
+                <Input
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  inputMode="numeric"
+                  className="!h-12 !rounded-full"
+                />
+                <Button type="primary" block className="!h-12 !rounded-full !border-0" onClick={verify} loading={verifying} disabled={verifying || !isOtpComplete}>
+                  Verify email
+                </Button>
+                <Button
+                  block
+                  className="!h-12 !rounded-full"
+                  onClick={resendVerification}
+                  loading={resending}
+                  disabled={resending || resendSeconds > 0}
+                >
+                  {resendSeconds > 0 ? `Resend available in ${resendSeconds}s` : 'Resend verification code'}
                 </Button>
               </div>
             </div>

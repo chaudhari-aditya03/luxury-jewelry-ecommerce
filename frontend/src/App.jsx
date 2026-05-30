@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { App as AntdApp, ConfigProvider } from 'antd';
 import { theme } from './styles/theme';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -26,6 +26,7 @@ import ProductDetailPage from './pages/ProductDetail';
 import CartPage from './pages/Cart';
 import CheckoutPage from './pages/Checkout';
 import AccountPage from './pages/Account';
+import MyCouponsPage from './pages/MyCoupons';
 import WishlistPage from './pages/Wishlist';
 
 // Admin Pages
@@ -34,6 +35,7 @@ import AdminProducts from './admin/pages/Products';
 import AdminCategories from './admin/pages/Categories';
 import AdminOrders from './admin/pages/Orders';
 import AdminUsers from './admin/pages/Users';
+import AdminUserEdit from './admin/pages/UserEdit';
 import AdminCoupons from './admin/pages/Coupons';
 import AdminAnalytics from './admin/pages/Analytics';
 import AdminPayments from './admin/pages/Payments';
@@ -63,8 +65,9 @@ function App() {
     <ThemeProvider>
       <ConfigProvider theme={theme}>
         <AuthProvider>
-          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Routes>
+          <AntdApp>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <Routes>
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -112,6 +115,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AccountPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/my-coupons"
+                element={
+                  <ProtectedRoute>
+                    <MyCouponsPage />
                   </ProtectedRoute>
                 }
               />
@@ -166,6 +177,14 @@ function App() {
                 }
               />
               <Route
+                path="/admin/users/edit/:id"
+                element={
+                  <AdminRoute>
+                    <AdminUserEdit />
+                  </AdminRoute>
+                }
+              />
+              <Route
                 path="/admin/coupons"
                 element={
                   <AdminRoute>
@@ -216,8 +235,9 @@ function App() {
 
               {/* Fallback Route */}
               <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Router>
+              </Routes>
+            </Router>
+          </AntdApp>
         </AuthProvider>
       </ConfigProvider>
     </ThemeProvider>

@@ -110,10 +110,8 @@ const LuxuryNavbar = () => {
     <>
       <motion.header
         initial={false}
-        animate={{
-          y: 0,
-          boxShadow: isScrolled ? '0 18px 48px rgba(17, 17, 17, 0.08)' : 'none',
-        }}
+        animate={{ y: 0 }}
+        style={{ boxShadow: isScrolled ? '0 18px 48px rgba(17, 17, 17, 0.08)' : '0 0 0 rgba(17, 17, 17, 0)' }}
         transition={{ duration: 0.25 }}
         className={`fixed inset-x-0 top-0 z-50 border-b transition-all duration-300 ${isScrolled ? 'border-white/80 bg-white/85 backdrop-blur-2xl' : 'border-transparent bg-white/55 backdrop-blur-xl'}`}
       >

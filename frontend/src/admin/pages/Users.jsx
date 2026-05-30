@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Input, Tag, Space, Popconfirm, message, Typography, Avatar } from 'antd';
-import { SearchOutlined, UserOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatDate } from '../../utils/helpers';
 import { adminService } from '../../services';
@@ -8,6 +9,7 @@ import { adminService } from '../../services';
 const { Title } = Typography;
 
 const AdminUsers = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -33,7 +35,9 @@ const AdminUsers = () => {
         name: user.fullName || user.email,
         email: user.email,
         role: user.role,
-        status: user.active ? 'Active' : 'Blocked',
+        status: user.emailVerified ? 'Verified' : 'Not verified',
+        isActive: Boolean(user.isActive),
+        emailVerified: Boolean(user.emailVerified),
         date: user.createdAt,
       }));
 
@@ -50,14 +54,14 @@ const AdminUsers = () => {
     }
   };
 
-  const handleBlockUser = async (id, currentStatus) => {
+  const handleDeleteUser = async (id) => {
     try {
-      await adminService.blockUser(id);
-      message.success(`User ${currentStatus === 'Active' ? 'blocked' : 'unblocked'} successfully`);
+      await adminService.deleteUser(id);
+      message.success('User deleted successfully');
       fetchUsers(pagination.current - 1, pagination.pageSize);
     } catch (error) {
-      console.error('Error updating user status:', error);
-      message.error('Failed to update user status');
+      console.error('Error deleting user:', error);
+      message.error('Failed to delete user');
     }
   };
 
@@ -106,7 +110,7 @@ const AdminUsers = () => {
       dataIndex: 'status',
       key: 'status',
       render: status => (
-        <Tag color={status === 'Active' ? 'success' : 'error'}>
+        <Tag color={status === 'Verified' ? 'success' : 'error'}>
           {status}
         </Tag>
       ),
@@ -116,18 +120,26 @@ const AdminUsers = () => {
       key: 'action',
       render: (_, record) => (
         record.role !== 'ADMIN' && (
-          <Popconfirm
-            title={`Are you sure you want to ${record.status === 'Active' ? 'block' : 'unblock'} this user?`}
-            onConfirm={() => handleBlockUser(record.id, record.status)}
-          >
+          <Space size="small" wrap>
             <Button
               type="text"
-              danger={record.status === 'Active'}
-            // icon={record.status === 'Active' ? <StopOutlined /> : <CheckCircleOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/admin/users/edit/${record.id}`)}
             >
-              {record.status === 'Active' ? 'Block' : 'Unblock'}
+              Edit
             </Button>
-          </Popconfirm>
+            <Popconfirm
+              title="Are you sure you want to delete this user?"
+              description="This will soft delete the account and remove it from the active user list."
+              onConfirm={() => handleDeleteUser(record.id)}
+              okText="Delete"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />}>
+                Delete
+              </Button>
+            </Popconfirm>
+          </Space>
         )
       ),
     },

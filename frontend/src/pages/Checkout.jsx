@@ -32,10 +32,12 @@ const CheckoutPage = () => {
   const [paymentSession, setPaymentSession] = useState(null);
   const [upiReference, setUpiReference] = useState('');
   const [orderComplete, setOrderComplete] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   const subtotal = useMemo(() => Number(cart.totalPrice ?? 0), [cart.totalPrice]);
+  const couponDiscount = Number(appliedCoupon?.discountAmount ?? 0);
   const tax = subtotal * 0.18;
-  const displayTotal = subtotal + tax;
+  const displayTotal = Math.max(0, subtotal - couponDiscount) + tax;
 
   const fetchCheckoutData = async () => {
     setIsLoadingData(true);
@@ -50,6 +52,16 @@ const CheckoutPage = () => {
 
       setCart(cartData);
       setAddresses(addressData);
+
+      const savedCoupon = localStorage.getItem('luxury-maison-applied-coupon');
+      if (savedCoupon) {
+        try {
+          setAppliedCoupon(JSON.parse(savedCoupon));
+        } catch {
+          setAppliedCoupon(null);
+          localStorage.removeItem('luxury-maison-applied-coupon');
+        }
+      }
 
       const defaultAddress = addressData.find((addr) => addr.isDefault) || addressData[0];
       if (defaultAddress) {
@@ -80,6 +92,7 @@ const CheckoutPage = () => {
       const orderResponse = await orderService.placeOrder({
         addressId: selectedAddressId,
         paymentMethod: selectedMethod,
+        couponCode: appliedCoupon?.code || '',
       });
 
       const orderData = orderResponse.data?.data;
@@ -218,7 +231,7 @@ const CheckoutPage = () => {
             <Card variant="borderless" style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
               {currentStep === 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <Space direction="vertical" style={{ width: '100%' }} size="large">
+                  <Space orientation="vertical" style={{ width: '100%' }} size="large">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Title level={4} style={{ margin: 0 }}>Shipping Address</Title>
                       <Button onClick={() => setIsAddressModalOpen(true)}>Add New Address</Button>
@@ -232,7 +245,7 @@ const CheckoutPage = () => {
                         value={selectedAddressId}
                         onChange={(e) => setSelectedAddressId(e.target.value)}
                       >
-                        <Space direction="vertical" style={{ width: '100%' }}>
+                        <Space orientation="vertical" style={{ width: '100%' }}>
                           {addresses.map((address) => (
                             <Card key={address.id} size="small" style={{ width: '100%' }}>
                               <Radio value={address.id}>
@@ -264,7 +277,7 @@ const CheckoutPage = () => {
                     </Paragraph>
                     <Form.Item name="paymentMethod">
                       <Radio.Group style={{ width: '100%' }} onChange={(e) => setPaymentMethod(e.target.value === 'cod' ? 'COD' : 'UPI')}>
-                        <Space direction="vertical" style={{ width: '100%' }}>
+                        <Space orientation="vertical" style={{ width: '100%' }}>
                           <Radio.Button value="upi" style={{ height: 72, display: 'flex', alignItems: 'center', width: '100%' }}>
                             <Space size="large">
                               <QrcodeOutlined />
@@ -314,7 +327,7 @@ const CheckoutPage = () => {
                     </Col>
                     <Col xs={24} md={14}>
                       <Card size="small" style={{ borderRadius: 12 }}>
-                        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <Text type="secondary">Order Number</Text>
                             <Text strong>{placedOrder.orderNumber}</Text>
@@ -375,7 +388,7 @@ const CheckoutPage = () => {
 
           <Col xs={24} lg={8}>
             <Card title="Order Summary" variant="borderless" style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Text>Items ({cart.totalItems || cart.items.length})</Text>
                   <Text strong>{formatPrice(subtotal)}</Text>
@@ -388,6 +401,12 @@ const CheckoutPage = () => {
                   <Text>Shipping</Text>
                   <Text type="success">Free</Text>
                 </div>
+                {appliedCoupon ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>Coupon ({appliedCoupon.code})</Text>
+                    <Text type="success">-{formatPrice(couponDiscount)}</Text>
+                  </div>
+                ) : null}
                 <Divider style={{ margin: '10px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Title level={4}>Estimated Total</Title>

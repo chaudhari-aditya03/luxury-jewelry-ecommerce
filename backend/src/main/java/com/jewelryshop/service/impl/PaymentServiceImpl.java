@@ -10,6 +10,7 @@ import com.jewelryshop.exception.BadRequestException;
 import com.jewelryshop.exception.ResourceNotFoundException;
 import com.jewelryshop.repository.OrderRepository;
 import com.jewelryshop.repository.PaymentRepository;
+import com.jewelryshop.service.NotificationEmailService;
 import com.jewelryshop.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final NotificationEmailService notificationEmailService;
 
     @Value("${payment.upi.id:adityachaudhari312005@oksbi}")
     private String upiId;
@@ -89,6 +91,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(order.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
+        boolean wasAlreadyPaid = order.getPaymentStatus() == Order.PaymentStatus.PAID;
         payment.setPaymentReference(request.getPaymentReference().trim());
         payment.setStatus(Payment.PaymentStatus.SUCCESS);
         paymentRepository.save(payment);
@@ -117,6 +120,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
+        boolean wasAlreadyPaid = order.getPaymentStatus() == Order.PaymentStatus.PAID;
         order.setPaymentStatus(paymentStatus);
         orderRepository.save(order);
 

@@ -89,7 +89,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/wishlist/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/reviews/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/coupons/apply").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/coupons/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/payment/**").hasAnyRole("USER", "ADMIN")
                         
                         // Any other request

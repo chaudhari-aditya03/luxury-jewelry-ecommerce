@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await authService.register(userData);
+      const response = await authService.sendOtp(userData);
       const verificationData = response.data.data;
       const email = verificationData?.email || userData.email;
       setPendingVerificationEmail(email);

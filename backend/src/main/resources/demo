@@ -1,0 +1,149 @@
+# =====================================================
+# SERVER CONFIGURATION
+# =====================================================
+spring.config.import=optional:file:.env[.properties],optional:file:.env.local[.properties]
+
+server.port=${PORT:${SERVER_PORT:8080}}
+server.servlet.context-path=/
+server.compression.enabled=true
+server.compression.min-response-size=1024
+spring.application.name=${APP_NAME:jewelry-ecommerce}
+
+# =====================================================
+# FILE PATHS
+# =====================================================
+file.upload.dir=${FILE_UPLOAD_DIR:uploads}
+
+# =====================================================
+# DATABASE CONFIGURATION
+# =====================================================
+spring.datasource.url=${DATABASE_URL}
+spring.datasource.username=${DATABASE_USERNAME}
+spring.datasource.password=${DATABASE_PASSWORD}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.hikari.minimum-idle=${DB_MIN_IDLE:5}
+spring.datasource.hikari.maximum-pool-size=${DB_MAX_POOL_SIZE:20}
+spring.datasource.hikari.connection-timeout=${DB_CONNECTION_TIMEOUT:30000}
+spring.datasource.hikari.idle-timeout=${DB_IDLE_TIMEOUT:600000}
+spring.datasource.hikari.max-lifetime=${DB_MAX_LIFETIME:1800000}
+spring.datasource.hikari.connection-test-query=SELECT 1
+
+# =====================================================
+# JPA / HIBERNATE CONFIGURATION
+# =====================================================
+spring.jpa.hibernate.ddl-auto=${DDL_AUTO:update}
+spring.jpa.show-sql=${SHOW_SQL:true}
+spring.jpa.properties.hibernate.format_sql=${FORMAT_SQL:true}
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.properties.hibernate.jdbc.time_zone=UTC
+spring.jpa.properties.hibernate.jdbc.batch_size=${HIBERNATE_BATCH_SIZE:20}
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+spring.jpa.open-in-view=false
+
+# =====================================================
+# JWT CONFIGURATION
+# =====================================================
+jwt.secret=${JWT_SECRET:change-me-to-a-long-random-secret}
+jwt.expiration=${JWT_EXPIRATION:86400000}
+
+# =====================================================
+# RAZORPAY CONFIGURATION
+# =====================================================
+razorpay.key.id=${RAZORPAY_KEY_ID:}
+razorpay.key.secret=${RAZORPAY_KEY_SECRET:}
+
+# =====================================================
+# FILE UPLOAD CONFIGURATION (Cloudinary)
+# =====================================================
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=${MAX_FILE_SIZE:10MB}
+spring.servlet.multipart.max-request-size=${MAX_REQUEST_SIZE:50MB}
+
+cloudinary.cloud-name=${CLOUDINARY_CLOUD_NAME}
+cloudinary.api-key=${CLOUDINARY_API_KEY}
+cloudinary.api-secret=${CLOUDINARY_API_SECRET}
+
+# =====================================================
+# LOGGING CONFIGURATION
+# =====================================================
+logging.level.root=${LOG_LEVEL_ROOT:INFO}
+logging.level.com.jewelryshop=${LOG_LEVEL_APP:DEBUG}
+logging.level.org.springframework.web=${LOG_LEVEL_SPRING_WEB:INFO}
+logging.level.org.springframework.security=${LOG_LEVEL_SPRING_SECURITY:INFO}
+logging.level.org.hibernate.SQL=${LOG_LEVEL_HIBERNATE_SQL:WARN}
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=${LOG_LEVEL_HIBERNATE_BINDER:WARN}
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %msg%n
+logging.file.name=${LOG_FILE_NAME:logs/jewelry-ecommerce.log}
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+
+# =====================================================
+# SWAGGER / OPENAPI CONFIGURATION
+# =====================================================
+springdoc.api-docs.path=/api-docs
+springdoc.api-docs.enabled=${API_DOCS_ENABLED:true}
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.enabled=${SWAGGER_UI_ENABLED:true}
+springdoc.swagger-ui.operations-sorter=method
+
+# =====================================================
+# CORS CONFIGURATION
+# =====================================================
+cors.allowed.origins=${CORS_ALLOWED_ORIGINS:https://jewelryeshop.vercel.app,http://localhost:5173,http://localhost:3000}
+cors.allowed.methods=${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
+cors.allowed.headers=${CORS_ALLOWED_HEADERS:*}
+cors.allow.credentials=${CORS_ALLOW_CREDENTIALS:true}
+
+# =====================================================
+# MAIL CONFIGURATION
+# =====================================================
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME:${SMTP_USERNAME:${GMAIL_USERNAME}}}
+spring.mail.password=${MAIL_PASSWORD:${SMTP_PASSWORD:${GMAIL_APP_PASSWORD}}}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=3000
+spring.mail.properties.mail.smtp.writetimeout=5000
+spring.mail.properties.mail.smtp.ssl.trust=${MAIL_HOST:smtp.gmail.com}
+spring.mail.properties.mail.smtp.ssl.protocols=TLSv1.2
+spring.mail.properties.mail.debug=true
+logging.level.org.springframework.mail=DEBUG
+logging.level.org.springframework.mail.javamail=DEBUG
+
+app.mail.from-name=${MAIL_FROM_NAME:Jewelry Shop}
+app.mail.from-email=${MAIL_FROM_EMAIL:${MAIL_USERNAME:${spring.mail.username:}}}
+app.admin.email=${ADMIN_EMAIL:${spring.mail.username:}}
+
+# =====================================================
+# OTP CONFIGURATION
+# =====================================================
+app.otp.expiry-minutes=${OTP_EXPIRY_MINUTES:5}
+app.otp.max-resend-count=${OTP_MAX_RESEND_COUNT:3}
+app.otp.max-attempt-count=${OTP_MAX_ATTEMPT_COUNT:5}
+app.order.delivery-working-days=${ORDER_DELIVERY_WORKING_DAYS:5}
+
+
+# OAuth2 Google configuration placeholders
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET}
+spring.security.oauth2.client.registration.google.scope=profile,email
+spring.security.oauth2.client.registration.google.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}
+spring.security.oauth2.client.provider.google.authorization-uri=https://accounts.google.com/o/oauth2/v2/auth
+spring.security.oauth2.client.provider.google.token-uri=https://oauth2.googleapis.com/token
+spring.security.oauth2.client.provider.google.user-info-uri=https://www.googleapis.com/oauth2/v3/userinfo
+spring.security.oauth2.client.provider.google.user-name-attribute=sub
+logging.level.org.springframework.security=DEBUG
+logging.level.org.springframework.security.oauth2=DEBUG
+logging.level.org.springframework.web=DEBUG
+# =====================================================
+# APP CONFIGURATION
+# =====================================================
+app.frontend.url=${FRONTEND_URL:https://jewelryeshop.vercel.app}
+
+# =====================================================
+# DIRECT PAYMENT CONFIGURATION
+# =====================================================
+payment.upi.id=${PAYMENT_UPI_ID}
+payment.upi.payee-name=${PAYMENT_UPI_PAYEE_NAME:Jewelry Shop}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
+  App,
   Row,
   Col,
   Typography,
@@ -8,6 +9,7 @@ import {
   Rate,
   Tag,
   Divider,
+  Input,
   InputNumber,
   Radio,
   Tabs,
@@ -22,12 +24,13 @@ import {
   SafetyCertificateOutlined, CarOutlined
 } from '@ant-design/icons';
 import MainLayout from '../layouts/MainLayout';
-import { productService, cartService, userService } from '../services';
+import { productService, cartService, userService, reviewService } from '../services';
 import { getImageUrl } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/product/ProductCard';
 
 const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -36,6 +39,29 @@ const currencyFormatter = new Intl.NumberFormat('en-IN', {
 });
 
 const normalizeCategory = (value) => String(value || '').trim().toLowerCase();
+
+const variantSeparator = ' | ';
+
+const parseVariantLabel = (variantName) => {
+  const rawName = String(variantName || '').trim();
+  if (!rawName.includes(variantSeparator)) {
+    return { name: rawName, size: '', color: '', label: rawName };
+  }
+
+  const parts = rawName.split(variantSeparator).map((part) => part.trim()).filter(Boolean);
+  const name = parts[0] || rawName;
+  const sizePart = parts.find((part) => /^Size:/i.test(part));
+  const colorPart = parts.find((part) => /^Color:/i.test(part));
+  const size = sizePart ? sizePart.replace(/^Size:\s*/i, '') : '';
+  const color = colorPart ? colorPart.replace(/^Color:\s*/i, '') : '';
+
+  return {
+    name,
+    size,
+    color,
+    label: [name, size ? `Size ${size}` : null, color ? `Color ${color}` : null].filter(Boolean).join(' · '),
+  };
+};
 
 const mapProduct = (data) => {
   const images = (data.images || [])
@@ -59,7 +85,10 @@ const mapProduct = (data) => {
     images: images.length > 0 ? images.map((url) => getImageUrl(url)) : [getImageUrl(null)],
     variants: (data.variants || []).map((variant) => ({
       id: variant.id,
-      name: variant.variantName,
+      rawName: variant.variantName,
+      ...parseVariantLabel(variant.variantName),
+      additionalPrice: Number(variant.additionalPrice ?? 0),
+      stockQuantity: Number(variant.stockQuantity ?? 0),
     })),
     stock: Number(data.stockQuantity ?? 0),
     sku: data.sku,
@@ -130,6 +159,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { message: appMessage } = App.useApp();
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,6 +167,11 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [error, setError] = useState(null);
 
   const selectedImage = useMemo(() => {
@@ -145,6 +180,39 @@ const ProductDetailPage = () => {
     }
     return product.images[selectedImageIndex] || product.mainImage || getImageUrl(null);
   }, [product, selectedImageIndex]);
+
+  const selectedVariantMeta = useMemo(() => {
+    if (!product || !selectedVariant) {
+      return null;
+    }
+    return product.variants.find((variant) => variant.id === selectedVariant) || null;
+  }, [product, selectedVariant]);
+
+  const displayPrice = useMemo(() => {
+    if (!product) return 0;
+    return Number(product.price || 0) + Number(selectedVariantMeta?.additionalPrice || 0);
+  }, [product, selectedVariantMeta]);
+
+  const displayOriginalPrice = useMemo(() => {
+    if (!product) return 0;
+    return Number(product.originalPrice || 0) + Number(selectedVariantMeta?.additionalPrice || 0);
+  }, [product, selectedVariantMeta]);
+
+  const availableStock = Number(selectedVariantMeta?.stockQuantity ?? product?.stock ?? 0);
+
+  const loadReviews = async (productId) => {
+    setReviewsLoading(true);
+    try {
+      const response = await reviewService.getProductReviews(productId, 0, 5);
+      const pageData = response.data?.data;
+      setReviews(pageData?.content || pageData || []);
+    } catch (reviewError) {
+      console.error('Failed to load reviews:', reviewError);
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -170,6 +238,7 @@ const ProductDetailPage = () => {
         setProduct(mappedProduct);
         setSelectedVariant(mappedProduct.variants[0]?.id ?? null);
         setSelectedImageIndex(0);
+        loadReviews(mappedProduct.id);
 
         setRelatedLoading(true);
         try {
@@ -218,9 +287,9 @@ const ProductDetailPage = () => {
     }
     try {
       await cartService.addToCart(product.id, quantity, selectedVariant);
-      message.success(`Added ${quantity} ${product.name} to cart`);
+      appMessage.success(`Added ${quantity} ${product.name} to cart`);
     } catch (error) {
-      message.error(error.response?.data?.message || 'Failed to add to cart');
+      appMessage.error(error.response?.data?.message || 'Failed to add to cart');
     }
   };
 
@@ -236,9 +305,55 @@ const ProductDetailPage = () => {
 
     try {
       await userService.addToWishlist(product.id);
-      message.success('Added to wishlist');
+      appMessage.success('Added to wishlist');
     } catch (error) {
-      message.error(error.response?.data?.message || 'Failed to add to wishlist');
+      appMessage.error(error.response?.data?.message || 'Failed to add to wishlist');
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!product) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    if (!reviewRating) {
+      appMessage.warning('Please choose a rating before submitting your review.');
+      return;
+    }
+
+    const trimmedComment = reviewComment.trim();
+    if (!trimmedComment) {
+      appMessage.warning('Please add a short comment to your review.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      await reviewService.addReview({
+        productId: product.id,
+        rating: reviewRating,
+        comment: trimmedComment,
+      });
+
+      const refreshedProduct = await productService.getProductById(product.id);
+      const refreshedData = refreshedProduct.data?.data;
+      if (refreshedData) {
+        setProduct(mapProduct(refreshedData));
+      }
+      await loadReviews(product.id);
+
+      setReviewRating(5);
+      setReviewComment('');
+      appMessage.success('Your review has been submitted.');
+    } catch (error) {
+      appMessage.error(error.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -251,8 +366,8 @@ const ProductDetailPage = () => {
     return `${reviews.toLocaleString('en-IN')} reviews`;
   };
 
-  const savedAmount = Math.max(0, Number(product.originalPrice || 0) - Number(product.price || 0));
-  const saleWindow = product.saleStartDate && product.saleEndDate
+  const savedAmount = Math.max(0, Number(displayOriginalPrice || 0) - Number(displayPrice || 0));
+  const saleWindow = product?.saleStartDate && product?.saleEndDate
     ? `${new Date(product.saleStartDate).toLocaleDateString('en-IN')} to ${new Date(product.saleEndDate).toLocaleDateString('en-IN')}`
     : 'No scheduled sale';
 
@@ -316,7 +431,7 @@ const ProductDetailPage = () => {
                     <Tag color="gold" className="m-0 rounded-full border-0 bg-luxury px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
                       {product.category}
                     </Tag>
-                    {product.originalPrice > product.price ? (
+                    {displayOriginalPrice > displayPrice ? (
                       <Tag color="red" className="m-0 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]">
                         Sale
                       </Tag>
@@ -381,7 +496,7 @@ const ProductDetailPage = () => {
                       Featured
                     </Tag>
                   ) : null}
-                  {product.stock > 0 ? (
+                  {availableStock > 0 ? (
                     <Tag color="green" className="m-0 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]">
                       In stock
                     </Tag>
@@ -402,15 +517,15 @@ const ProductDetailPage = () => {
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-end gap-3">
-                  {product.originalPrice > product.price ? (
+                  {displayOriginalPrice > displayPrice ? (
                     <Text delete className="text-lg text-muted">
-                      {currencyFormatter.format(product.originalPrice)}
+                      {currencyFormatter.format(displayOriginalPrice)}
                     </Text>
                   ) : null}
                   <Text className="font-display text-4xl font-semibold text-gold md:text-5xl">
-                    {currencyFormatter.format(product.price)}
+                    {currencyFormatter.format(displayPrice)}
                   </Text>
-                  {product.originalPrice > product.price ? (
+                  {displayOriginalPrice > displayPrice ? (
                     <Tag color="gold" className="m-0 rounded-full border-0 bg-[#fff4e0] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#977132]">
                       Save {currencyFormatter.format(savedAmount)}
                     </Tag>
@@ -428,7 +543,7 @@ const ProductDetailPage = () => {
                   </div>
                   <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
                     <p className="text-xs uppercase tracking-[0.25em] text-gold">Stock</p>
-                    <p className="mt-2 text-sm font-medium text-text/80">{product.stock} pieces</p>
+                    <p className="mt-2 text-sm font-medium text-text/80">{availableStock} pieces</p>
                   </div>
                 </div>
 
@@ -448,11 +563,11 @@ const ProductDetailPage = () => {
                       <div className="mt-3 space-y-2 text-sm text-text/80">
                         <div className="flex items-center justify-between gap-3">
                           <span>Original price</span>
-                          <span>{formatMoney(product.originalPrice)}</span>
+                          <span>{formatMoney(displayOriginalPrice)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-3">
                           <span>Current price</span>
-                          <span>{formatMoney(product.price)}</span>
+                          <span>{formatMoney(displayPrice)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-3 font-semibold text-gold">
                           <span>You save</span>
@@ -476,6 +591,10 @@ const ProductDetailPage = () => {
                           <span>Status</span>
                           <span>{product.isActive === false ? 'Hidden' : 'Visible'}</span>
                         </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Variant stock</span>
+                          <span>{availableStock.toLocaleString('en-IN')}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -494,10 +613,22 @@ const ProductDetailPage = () => {
                             key={variant.id}
                             className="!mr-0 !h-11 !rounded-full !border !border-[#e8dcc4] !bg-white !px-5 !leading-[44px] !text-sm !font-medium !text-luxury hover:!border-gold hover:!text-gold"
                           >
-                            {variant.name}
+                              {variant.label || variant.name}
                           </Radio.Button>
                         ))}
                       </Radio.Group>
+                      {selectedVariantMeta ? (
+                        <div className="mt-4 rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
+                          <p className="text-xs uppercase tracking-[0.25em] text-gold">Selected variant</p>
+                          <div className="mt-3 grid gap-2 text-sm text-text/80 sm:grid-cols-2">
+                            <p><span className="font-semibold text-luxury">Name:</span> {selectedVariantMeta.label || selectedVariantMeta.name}</p>
+                            <p><span className="font-semibold text-luxury">Size:</span> {selectedVariantMeta.size || '—'}</p>
+                            <p><span className="font-semibold text-luxury">Color:</span> {selectedVariantMeta.color || '—'}</p>
+                            <p><span className="font-semibold text-luxury">Extra price:</span> {formatMoney(selectedVariantMeta.additionalPrice)}</p>
+                            <p><span className="font-semibold text-luxury">Stock:</span> {selectedVariantMeta.stockQuantity.toLocaleString('en-IN')}</p>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
 
@@ -506,17 +637,17 @@ const ProductDetailPage = () => {
                     <div className="mt-3 flex flex-wrap items-center gap-4">
                       <InputNumber
                         min={1}
-                        max={Math.max(product.stock, 1)}
+                        max={Math.max(availableStock, 1)}
                         value={quantity}
                         onChange={(value) => setQuantity(value ?? 1)}
-                        disabled={product.stock === 0}
+                        disabled={availableStock === 0}
                         className="!h-12 !w-32 !rounded-full !border-[#e8dcc4] !bg-white !px-4 !py-2"
                         controls={false}
                       />
-                      {product.stock > 0 && product.stock < 10 ? (
-                        <Text className="text-sm text-[#9f6d22]">Only {product.stock} left in vault</Text>
+                      {availableStock > 0 && availableStock < 10 ? (
+                        <Text className="text-sm text-[#9f6d22]">Only {availableStock} left in vault</Text>
                       ) : null}
-                      {product.stock === 0 ? (
+                      {availableStock === 0 ? (
                         <Text className="text-sm text-red-500">Out of stock</Text>
                       ) : null}
                     </div>
@@ -528,7 +659,7 @@ const ProductDetailPage = () => {
                       size="large"
                       icon={<ShoppingCartOutlined />}
                       onClick={handleAddToCart}
-                      disabled={product.stock === 0}
+                      disabled={availableStock === 0}
                       className="!h-14 !w-full !rounded-full !border-0 !bg-luxury !px-7 !font-semibold !text-white shadow-[0_16px_32px_rgba(17,17,17,0.12)] transition-transform hover:!-translate-y-0.5 hover:!bg-gold sm:!flex-1"
                     >
                       Add to Cart
@@ -586,7 +717,7 @@ const ProductDetailPage = () => {
               <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-gold">Availability</p>
                 <p className="mt-2 text-sm leading-6 text-text/80">
-                  {product.stock > 0 ? `Ready to ship with ${product.stock} pieces in stock.` : 'Currently out of stock.'}
+                  {availableStock > 0 ? `Ready to ship with ${availableStock} pieces in stock.` : 'Currently out of stock.'}
                 </p>
               </div>
               <div className="rounded-[1.4rem] border border-luxury/10 bg-background px-4 py-4">
@@ -605,16 +736,83 @@ const ProductDetailPage = () => {
                 <Text className="text-sm text-muted">{renderRatingText()}</Text>
               </div>
               <p className="mt-4 text-sm leading-7 text-text/80">
-                Customer feedback will appear here once reviews are submitted. Until then, the piece has been prepared to feel polished and gift-ready.
+                Share your experience with this piece. Ratings and comments are saved to your account review history.
               </p>
+
+              {isAuthenticated ? (
+                <div className="mt-5 space-y-4 rounded-[1.4rem] border border-white/70 bg-white p-4 shadow-[0_12px_30px_rgba(17,17,17,0.04)]">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-gold">Leave a review</p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <Rate value={reviewRating} onChange={setReviewRating} className="text-gold" />
+                      <Text className="text-sm text-muted">{reviewRating}/5</Text>
+                    </div>
+                  </div>
+                  <TextArea
+                    rows={4}
+                    value={reviewComment}
+                    onChange={(event) => setReviewComment(event.target.value)}
+                    placeholder="Tell other shoppers what you liked about the product..."
+                    maxLength={1000}
+                    showCount
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="primary"
+                      onClick={handleReviewSubmit}
+                      loading={isSubmittingReview}
+                      className="!h-11 !rounded-full !border-0 !bg-luxury !px-6 !font-semibold !text-white hover:!bg-gold"
+                    >
+                      Submit Review
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Alert
+                  className="mt-5"
+                  type="info"
+                  showIcon
+                  message="Sign in to review"
+                  description="You need an account to rate and review this product."
+                />
+              )}
             </div>
             <div className="mt-5">
-              <Alert
-                type="info"
-                showIcon
-                message="Verified purchase reviews"
-                description="This section is intentionally clean when the product has no live comments, so the page still feels elegant on first visit."
-              />
+              <div className="rounded-[1.4rem] border border-luxury/10 bg-background p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-luxury">Recent reviews</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-gold">{reviews.length.toLocaleString('en-IN')} shown</p>
+                </div>
+                <div className="mt-4 space-y-4">
+                  {reviewsLoading ? (
+                    <div className="py-6 text-center">
+                      <Spin />
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    reviews.map((review) => (
+                      <div key={review.id} className="rounded-[1.2rem] border border-white/70 bg-white p-4 shadow-[0_10px_24px_rgba(17,17,17,0.04)]">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-luxury">{review.userName || 'Verified customer'}</p>
+                            <p className="text-xs text-muted">{review.createdAt ? new Date(review.createdAt).toLocaleDateString('en-IN') : 'Recently'}</p>
+                          </div>
+                          <Rate disabled allowHalf value={Number(review.rating || 0)} className="text-gold" />
+                        </div>
+                        {review.comment ? (
+                          <p className="mt-3 text-sm leading-7 text-text/80">{review.comment}</p>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="No reviews yet"
+                      description="Be the first to leave feedback for this product."
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </SectionCard>
         </div>
@@ -656,7 +854,7 @@ const ProductDetailPage = () => {
                       <div className="mt-3 space-y-2 text-sm text-text/80">
                         <p><span className="font-semibold text-luxury">SKU:</span> {product.sku || 'Not specified'}</p>
                         <p><span className="font-semibold text-luxury">Category:</span> {product.category}</p>
-                        <p><span className="font-semibold text-luxury">Availability:</span> {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</p>
+                        <p><span className="font-semibold text-luxury">Availability:</span> {availableStock > 0 ? `${availableStock} in stock` : 'Out of stock'}</p>
                       </div>
                     </div>
                   </div>
@@ -666,12 +864,38 @@ const ProductDetailPage = () => {
                 label: `Reviews (${product.reviewCount ?? 0})`,
                 key: '2',
                 children: (
-                  <div className="rounded-[1.4rem] border border-luxury/10 bg-background p-6 text-center">
-                    <Rate disabled allowHalf value={Number(product.rating || 0)} className="text-gold" />
-                    <p className="mt-4 font-display text-2xl font-semibold text-luxury">Curated for a polished first impression</p>
-                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted">
-                      Customer reviews will display here once available. The layout stays refined even when the section is empty, so the page remains visually balanced.
-                    </p>
+                  <div className="space-y-4 rounded-[1.4rem] border border-luxury/10 bg-background p-6">
+                    <div className="text-center">
+                      <Rate disabled allowHalf value={Number(product.rating || 0)} className="text-gold" />
+                      <p className="mt-4 font-display text-2xl font-semibold text-luxury">{renderRatingText()}</p>
+                      <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted">
+                        The latest customer feedback is shown here alongside the live rating summary from the review service.
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {reviewsLoading ? (
+                        <div className="py-6 text-center">
+                          <Spin />
+                        </div>
+                      ) : reviews.length > 0 ? (
+                        reviews.slice(0, 3).map((review) => (
+                          <div key={review.id} className="rounded-[1.2rem] border border-white/70 bg-white p-4 text-left shadow-[0_10px_24px_rgba(17,17,17,0.04)]">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <p className="font-semibold text-luxury">{review.userName || 'Verified customer'}</p>
+                              <Rate disabled allowHalf value={Number(review.rating || 0)} className="text-gold" />
+                            </div>
+                            {review.comment ? <p className="mt-3 text-sm leading-7 text-text/80">{review.comment}</p> : null}
+                          </div>
+                        ))
+                      ) : (
+                        <Alert
+                          type="info"
+                          showIcon
+                          message="No reviews yet"
+                          description="Once shoppers leave feedback, it will appear here and in the main review section above."
+                        />
+                      )}
+                    </div>
                   </div>
                 ),
               },

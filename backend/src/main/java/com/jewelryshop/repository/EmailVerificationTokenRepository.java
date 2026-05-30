@@ -15,6 +15,10 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
 
     Optional<EmailVerificationToken> findByToken(String token);
 
+    Optional<EmailVerificationToken> findByTokenAndUser_EmailAndUsedFalse(String token, String email);
+
+    boolean existsByToken(String token);
+
     @Modifying
     @Query("DELETE FROM EmailVerificationToken t WHERE t.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);

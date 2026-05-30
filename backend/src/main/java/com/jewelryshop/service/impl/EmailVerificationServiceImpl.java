@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,43 +25,36 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     private final UserRepository userRepository;
     private final NotificationEmailService notificationEmailService;
 
-    @Value("${app.frontend.url:http://localhost:5173}")
-    private String frontendUrl;
-
     @Override
     @Transactional
     public VerificationResponseDTO sendVerificationEmail(User user) {
         tokenRepository.deleteByUserId(user.getId());
 
-        String token = UUID.randomUUID().toString().replace("-", "");
+        String token = generateUniqueOtpCode();
         EmailVerificationToken verificationToken = new EmailVerificationToken();
         verificationToken.setToken(token);
         verificationToken.setUser(user);
-        verificationToken.setExpiresAt(LocalDateTime.now().plusHours(24));
+        verificationToken.setExpiresAt(LocalDateTime.now().plusMinutes(15));
         verificationToken.setUsed(false);
         tokenRepository.save(verificationToken);
 
         user.setVerificationSentAt(LocalDateTime.now());
         userRepository.save(user);
 
-        String link = frontendUrl + "/verify-email?token=" + token;
-        notificationEmailService.sendVerificationEmail(user, link);
+        notificationEmailService.sendVerificationEmail(user, token);
 
-        return new VerificationResponseDTO(true, "Verification email sent", user.getEmail(), false, true);
+        return new VerificationResponseDTO(true, "Verification code sent", user.getEmail(), false, true);
     }
 
     @Override
     @Transactional
-    public VerificationResponseDTO verifyEmail(String token) {
-        EmailVerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new BadRequestException("Invalid verification token"));
-
-        if (verificationToken.isUsed()) {
-            throw new BadRequestException("Verification token has already been used");
-        }
+    public VerificationResponseDTO verifyEmail(String email, String otpCode) {
+        EmailVerificationToken verificationToken = tokenRepository
+                .findByTokenAndUser_EmailAndUsedFalse(otpCode, email)
+                .orElseThrow(() -> new BadRequestException("Invalid verification code"));
 
         if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Verification token has expired");
+            throw new BadRequestException("Verification code has expired");
         }
 
         User user = verificationToken.getUser();
@@ -87,5 +79,16 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         }
 
         return sendVerificationEmail(user);
+    }
+
+    private String generateUniqueOtpCode() {
+        for (int attempts = 0; attempts < 20; attempts++) {
+            String code = String.format("%06d", (int) (Math.random() * 1_000_000));
+            if (!tokenRepository.existsByToken(code)) {
+                return code;
+            }
+        }
+
+        throw new IllegalStateException("Unable to generate a unique verification code");
     }
 }

@@ -4,11 +4,20 @@ export const authService = {
   login: (email, password) =>
     apiClient.post('/auth/login', { email, password }),
 
+  sendOtp: (userData) =>
+    apiClient.post('/auth/send-otp', userData),
+
   register: (userData) =>
     apiClient.post('/auth/register', userData),
 
-  verifyEmail: (token) =>
-    apiClient.get('/auth/verify-email', { params: { token } }),
+  verifyOtp: (email, otpCode) =>
+    apiClient.post('/auth/verify-otp', { email, otpCode }),
+
+  resendOtp: (email) =>
+    apiClient.post('/auth/resend-otp', { email }),
+
+  verifyEmail: (email, otpCode) =>
+    apiClient.post('/auth/verify-email', { email, otpCode }),
 
   resendVerificationEmail: (email) =>
     apiClient.post('/auth/resend-verification', { email }),
@@ -79,7 +88,21 @@ export const cartService = {
     apiClient.delete('/cart/clear'),
 
   applyCoupon: (code, orderAmount) =>
-    apiClient.post('/coupons/apply', null, { params: { code, orderAmount } }),
+    couponService.applyCoupon(code, orderAmount),
+};
+
+export const couponService = {
+  applyCoupon: (code, orderAmount) =>
+    apiClient.post('/coupons/apply', { code, orderAmount }),
+
+  getMyCoupons: () =>
+    apiClient.get('/coupons/my'),
+
+  getAvailableCoupons: () =>
+    apiClient.get('/coupons/available'),
+
+  getCouponAnalytics: () =>
+    apiClient.get('/admin/coupons/analytics'),
 };
 
 export const orderService = {
@@ -177,6 +200,15 @@ export const adminService = {
   getAllUsers: (page = 0, size = 10) =>
     apiClient.get('/admin/users', { params: { page, size } }),
 
+  getUserById: (userId) =>
+    apiClient.get(`/admin/users/${userId}`),
+
+  updateUser: (userId, userData) =>
+    apiClient.put(`/admin/users/${userId}`, userData),
+
+  deleteUser: (userId) =>
+    apiClient.delete(`/admin/users/${userId}`),
+
   blockUser: (userId) =>
     apiClient.put(`/admin/users/block/${userId}`),
 
@@ -186,6 +218,15 @@ export const adminService = {
 
   getAllCoupons: () =>
     apiClient.get('/admin/coupons'),
+
+  getCouponById: (id) =>
+    apiClient.get(`/admin/coupons/${id}`),
+
+  updateCoupon: (id, couponData) =>
+    apiClient.put(`/admin/coupons/${id}`, couponData),
+
+  toggleCouponStatus: (id, active) =>
+    apiClient.put(`/admin/coupons/${id}/status`, null, { params: { active } }),
 
   deleteCoupon: (id) =>
     apiClient.delete(`/admin/coupons/${id}`),

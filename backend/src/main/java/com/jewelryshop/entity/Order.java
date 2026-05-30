@@ -16,7 +16,8 @@ import java.util.List;
 @Entity
 @Table(name = "orders", indexes = {
     @Index(name = "idx_orders_user", columnList = "user_id"),
-    @Index(name = "idx_orders_status", columnList = "order_status")
+    @Index(name = "idx_orders_status", columnList = "order_status"),
+    @Index(name = "idx_orders_coupon", columnList = "coupon_id")
 })
 @Data
 @NoArgsConstructor
@@ -34,6 +35,10 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
 
     @Column(name = "address_snapshot", columnDefinition = "TEXT")
     private String addressSnapshot;

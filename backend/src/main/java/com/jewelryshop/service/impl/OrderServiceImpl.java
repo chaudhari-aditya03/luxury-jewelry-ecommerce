@@ -35,6 +35,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final ProductRepository productRepository;
+    private final CouponRepository couponRepository;
     private final CouponService couponService;
     private final ObjectMapper objectMapper;
     private final ActivityLogService activityLogService;
@@ -83,8 +84,12 @@ public class OrderServiceImpl implements OrderService {
 
         // Apply coupon if provided
         BigDecimal discountAmount = BigDecimal.ZERO;
+        Coupon appliedCoupon = null;
         if (request.getCouponCode() != null && !request.getCouponCode().isEmpty()) {
-            discountAmount = couponService.applyCoupon(request.getCouponCode(), totalAmount);
+            CouponValidationResponse couponValidation = couponService.validateCouponForUser(userId, request.getCouponCode(), totalAmount);
+            discountAmount = couponValidation.getDiscountAmount();
+
+            appliedCoupon = couponRepository.getReferenceById(couponValidation.getCouponId());
         }
 
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
@@ -93,6 +98,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setOrderNumber(generateOrderNumber());
         order.setUser(user);
+        order.setCoupon(appliedCoupon);
         order.setAddressSnapshot(serializeAddress(address));
         order.setTotalAmount(totalAmount);
         order.setDiscountAmount(discountAmount);
@@ -127,6 +133,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         orderRepository.save(savedOrder);
+
+        if (appliedCoupon != null) {
+            couponService.recordCouponUsage(appliedCoupon.getId(), userId, savedOrder.getId());
+        }
 
         // Clear cart
         cart.getItems().clear();
@@ -229,6 +239,8 @@ public class OrderServiceImpl implements OrderService {
         response.setId(order.getId());
         response.setOrderNumber(order.getOrderNumber());
         response.setUserId(order.getUser().getId());
+        response.setCouponId(order.getCoupon() != null ? order.getCoupon().getId() : null);
+        response.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
         response.setAddressSnapshot(order.getAddressSnapshot());
         response.setTotalAmount(order.getTotalAmount());
         response.setDiscountAmount(order.getDiscountAmount());

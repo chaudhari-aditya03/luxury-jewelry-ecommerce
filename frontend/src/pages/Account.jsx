@@ -13,7 +13,7 @@ import {
 import MainLayout from '../layouts/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice, formatDate, getImageUrl } from '../utils/helpers';
-import { orderService, userService } from '../services';
+import { orderService, userService, couponService } from '../services';
 import './Account.css';
 
 const statusStyles = {
@@ -74,6 +74,7 @@ const AccountPage = () => {
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
+  const [myCoupons, setMyCoupons] = useState([]);
   const [sectionErrors, setSectionErrors] = useState({});
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [orderDetailLoading, setOrderDetailLoading] = useState(false);
@@ -110,11 +111,12 @@ const AccountPage = () => {
       setSectionErrors({});
 
       try {
-        const [profileRes, ordersRes, addressesRes, wishlistRes] = await Promise.allSettled([
+        const [profileRes, ordersRes, addressesRes, wishlistRes, couponsRes] = await Promise.allSettled([
           userService.getProfile(),
           orderService.getMyOrders(),
           userService.getAddresses(),
           userService.getWishlist(),
+          couponService.getMyCoupons(),
         ]);
 
         if (!isMounted) {
@@ -170,6 +172,13 @@ const AccountPage = () => {
         } else {
           nextErrors.wishlist = wishlistRes.reason?.response?.data?.message || 'Failed to load wishlist';
           setWishlistItems([]);
+        }
+
+        if (couponsRes.status === 'fulfilled') {
+          setMyCoupons(couponsRes.value.data?.data || []);
+        } else {
+          nextErrors.coupons = couponsRes.reason?.response?.data?.message || 'Failed to load coupons';
+          setMyCoupons([]);
         }
 
         setSectionErrors(nextErrors);
@@ -337,6 +346,11 @@ const AccountPage = () => {
 
     if (paths[tabKey]) {
       navigate(paths[tabKey]);
+      return;
+    }
+
+    if (tabKey === 'coupons') {
+      navigate('/my-coupons');
     }
   };
 
@@ -370,6 +384,12 @@ const AccountPage = () => {
       label: 'Payments',
       description: 'Payment history and status',
       icon: CreditCard,
+    },
+    {
+      key: 'coupons',
+      label: 'Coupons',
+      description: 'Rewards and special offers',
+      icon: Sparkles,
     },
     {
       key: 'logout',
@@ -483,6 +503,10 @@ const AccountPage = () => {
                 <div className="account-summary-item">
                   <p className="account-summary-label">Wishlist</p>
                   <p className="account-summary-value">{wishlistItems.length.toLocaleString('en-IN')} pieces</p>
+                </div>
+                <div className="account-summary-item">
+                  <p className="account-summary-label">Coupons</p>
+                  <p className="account-summary-value">{myCoupons.length.toLocaleString('en-IN')} offers</p>
                 </div>
                 <div className="account-summary-item">
                   <p className="account-summary-label">Addresses</p>
@@ -599,6 +623,9 @@ const AccountPage = () => {
                       <div className="account-button-row mt-5">
                         <Button className="account-secondary-btn" onClick={() => navigateToTab('addresses')} aria-label="Manage saved addresses">
                           Manage Addresses
+                        </Button>
+                        <Button className="account-primary-btn" onClick={() => navigate('/my-coupons')} aria-label="View coupons">
+                          View Coupons
                         </Button>
                       </div>
                     </div>

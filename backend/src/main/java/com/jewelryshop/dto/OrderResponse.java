@@ -17,6 +17,8 @@ public class OrderResponse {
     private Long id;
     private String orderNumber;
     private Long userId;
+    private Long couponId;
+    private String couponCode;
     private String addressSnapshot;
     private BigDecimal totalAmount;
     private BigDecimal discountAmount;

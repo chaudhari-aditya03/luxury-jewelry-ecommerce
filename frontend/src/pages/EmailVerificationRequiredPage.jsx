@@ -50,7 +50,7 @@ const EmailVerificationRequiredPage = () => {
             <span className="block text-gold">your email first.</span>
           </h2>
           <p className="max-w-md text-lg leading-8 text-white/72">
-            Unverified accounts cannot sign in. Use the button below to resend the verification link.
+            Unverified accounts cannot sign in. Use the button below to resend the verification code.
           </p>
         </div>
       </aside>
@@ -62,11 +62,11 @@ const EmailVerificationRequiredPage = () => {
           </div>
           <p className="page-eyebrow">Email verification required</p>
           <h1 className="mt-3 text-3xl font-semibold text-charcoal-700">Please verify your email before login</h1>
-          <p className="mt-2 text-sm leading-7 text-muted">{email || 'We sent a verification link to your account email.'}</p>
+          <p className="mt-2 text-sm leading-7 text-muted">{email || 'We sent a verification code to your account email.'}</p>
 
           <div className="mt-6 space-y-4">
             <Button type="primary" block className="!h-12 !rounded-full !border-0" onClick={resendVerification}>
-              Resend verification email
+              Resend verification code
             </Button>
             <Link to="/login" className="block text-sm text-muted no-underline hover:text-gold">Back to login</Link>
           </div>

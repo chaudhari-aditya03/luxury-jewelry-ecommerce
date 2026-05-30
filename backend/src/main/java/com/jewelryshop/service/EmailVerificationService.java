@@ -5,6 +5,6 @@ import com.jewelryshop.entity.User;
 
 public interface EmailVerificationService {
     VerificationResponseDTO sendVerificationEmail(User user);
-    VerificationResponseDTO verifyEmail(String token);
+    VerificationResponseDTO verifyEmail(String email, String otpCode);
     VerificationResponseDTO resendVerificationEmail(String email);
 }
