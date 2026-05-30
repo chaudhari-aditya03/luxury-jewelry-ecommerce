@@ -74,6 +74,16 @@ public class BrevoEmailService implements EmailService {
     }
 
     @Override
+    public EmailResponse sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> variables) {
+        return send(EmailRequest.builder()
+                .to(to)
+                .subject(subject)
+                .templateName(templateName)
+                .variables(variables)
+                .build());
+    }
+
+    @Override
     public EmailResponse send(EmailRequest request) {
         if (!mailEnabled || EmailConstants.PROVIDER_DISABLED.equalsIgnoreCase(mailProvider)) {
             log.warn("Mail delivery is disabled. Skipping template={} to={}", request.getTemplateName(), maskEmail(request.getTo()));
