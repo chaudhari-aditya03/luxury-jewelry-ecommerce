@@ -40,4 +40,7 @@ public class PaymentStatusHistory {
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    public PaymentStatusHistory(Payment payment, String oldStatus, String newStatus, String changedBy, Object o, String notes) {
+    }
 }

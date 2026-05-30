@@ -40,4 +40,7 @@ public class OrderStatusHistory {
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    public OrderStatusHistory(Order order, String oldStatus, String newStatus, String changedBy, Object o, String notes) {
+    }
 }
