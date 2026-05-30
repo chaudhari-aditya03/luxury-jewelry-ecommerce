@@ -2,6 +2,7 @@ package com.jewelryshop.service.impl;
 
 import com.jewelryshop.service.EmailService;
 import com.jewelryshop.service.EmailTemplateService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
@@ -15,8 +16,14 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -24,12 +31,31 @@ import java.util.Map;
 @Slf4j
 public class EmailServiceImpl implements EmailService {
 
+    private static final String PROVIDER_SMTP = "smtp";
+    private static final String PROVIDER_RESEND = "resend";
+    private static final String PROVIDER_DISABLED = "disabled";
+    private static final String RESEND_API_URL = "https://api.resend.com/emails";
+
     private final JavaMailSender mailSender;
     private final EmailTemplateService emailTemplateService;
     private final Environment environment;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Value("${app.mail.from-email:${spring.mail.username:}}")
     private String fromEmail;
+
+    @Value("${app.mail.from-name:Jewelry Shop}")
+    private String fromName;
+
+    @Value("${app.mail.provider:smtp}")
+    private String mailProvider;
+
+    @Value("${app.mail.enabled:true}")
+    private boolean mailEnabled;
+
+    @Value("${app.mail.api-key:}")
+    private String mailApiKey;
 
     private String resolvedFromEmail;
 
@@ -48,6 +74,11 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> variables) throws MessagingException {
+        if (!mailEnabled || PROVIDER_DISABLED.equalsIgnoreCase(mailProvider)) {
+            log.warn("Mail delivery is disabled. Skipping template={} to={}", templateName, maskEmail(to));
+            return;
+        }
+
         String resolvedTo = validateEmail(to, "recipient");
         String resolvedSender = validateEmail(resolveSenderAddress(), "sender");
         if (subject == null || subject.isBlank()) {
@@ -59,12 +90,19 @@ public class EmailServiceImpl implements EmailService {
 
         log.info("Sending email template={} to={} subject={}", templateName, maskEmail(resolvedTo), subject);
 
+        String htmlBody = emailTemplateService.render(templateName, variables);
+
+        if (PROVIDER_RESEND.equalsIgnoreCase(mailProvider)) {
+            sendViaResend(resolvedSender, resolvedTo, subject, htmlBody, templateName);
+            return;
+        }
+
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
         helper.setTo(resolvedTo);
         helper.setFrom(resolvedSender);
         helper.setSubject(subject);
-        helper.setText(emailTemplateService.render(templateName, variables), true);
+        helper.setText(htmlBody, true);
 
         try {
             mailSender.send(message);
@@ -73,6 +111,46 @@ public class EmailServiceImpl implements EmailService {
             log.error("Failed to send email template={} to={}", templateName, maskEmail(resolvedTo), ex);
             throw ex;
         }
+    }
+
+    private void sendViaResend(String from, String to, String subject, String htmlBody, String templateName) throws MessagingException {
+        if (mailApiKey == null || mailApiKey.isBlank()) {
+            throw new IllegalStateException("MAIL_API_KEY is required when app.mail.provider=resend");
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("from", formatSender(from));
+        payload.put("to", new String[]{to});
+        payload.put("subject", subject);
+        payload.put("html", htmlBody);
+
+        try {
+            String requestBody = objectMapper.writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(RESEND_API_URL))
+                    .header("Authorization", "Bearer " + mailApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("Email sent successfully via Resend template={} to={}", templateName, maskEmail(to));
+                return;
+            }
+
+            throw new IllegalStateException("Resend API returned status " + response.statusCode() + ": " + response.body());
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Resend email request was interrupted", ex);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to send email through Resend", ex);
+        }
+    }
+
+    private String formatSender(String senderEmail) {
+        String displayName = fromName != null && !fromName.isBlank() ? fromName.trim() : "Jewelry Shop";
+        return displayName + " <" + senderEmail + ">";
     }
 
     private String validateEmail(String email, String label) throws AddressException {
