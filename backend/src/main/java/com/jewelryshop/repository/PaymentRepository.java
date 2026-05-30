@@ -15,8 +15,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query(value = "SELECT p FROM Payment p " +
             "LEFT JOIN FETCH p.order o " +
-            "LEFT JOIN FETCH o.user",
-            countQuery = "SELECT COUNT(p) FROM Payment p")
+            "LEFT JOIN FETCH o.user " +
+            "WHERE p.deletedAt IS NULL",
+            countQuery = "SELECT COUNT(p) FROM Payment p WHERE p.deletedAt IS NULL")
     Page<Payment> findAllWithOrderDetails(Pageable pageable);
 
     Optional<Payment> findByTransactionId(String transactionId);
@@ -25,5 +26,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByOrderIdAndStatus(Long orderId, Payment.PaymentStatus status);
 
-    Optional<Payment> findTopByOrderIdOrderByCreatedAtDesc(Long orderId);
+    Optional<Payment> findTopByOrderIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long orderId);
+
+    Optional<Payment> findByIdAndDeletedAtIsNull(Long id);
 }

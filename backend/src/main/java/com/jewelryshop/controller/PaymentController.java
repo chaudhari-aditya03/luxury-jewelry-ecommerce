@@ -5,6 +5,7 @@ import com.jewelryshop.dto.ConfirmUpiPaymentRequest;
 import com.jewelryshop.dto.CreatePaymentRequest;
 import com.jewelryshop.dto.PaymentInitiationResponse;
 import com.jewelryshop.dto.PaymentResponse;
+import com.jewelryshop.security.CustomUserDetails;
 import com.jewelryshop.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -45,9 +47,11 @@ public class PaymentController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update payment status (Admin)")
     public ResponseEntity<ApiResponse<PaymentResponse>> processRefund(
+            Authentication authentication,
             @RequestParam Long orderId,
             @RequestParam String status) {
-        PaymentResponse payment = paymentService.updatePaymentStatus(orderId, status);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        PaymentResponse payment = paymentService.updatePaymentStatus(orderId, status, userDetails.getEmail());
         return ResponseEntity.ok(ApiResponse.success("Payment status updated", payment));
     }
 
@@ -57,8 +61,16 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<Page<PaymentResponse>>> getAllPayments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<PaymentResponse> payments = paymentService.getAllPayments(pageable);
         return ResponseEntity.ok(ApiResponse.success(payments));
+    }
+
+    @DeleteMapping("/admin/payments/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete payment history (Admin)")
+    public ResponseEntity<ApiResponse<Void>> deletePaymentHistory(@PathVariable Long id) {
+        paymentService.deletePaymentHistory(id);
+        return ResponseEntity.ok(ApiResponse.success("Payment history deleted successfully", null));
     }
 }

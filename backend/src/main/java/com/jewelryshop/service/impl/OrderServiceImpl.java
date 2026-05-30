@@ -12,6 +12,7 @@ import com.jewelryshop.service.OrderService;
 import com.jewelryshop.service.ActivityLogService;
 import com.jewelryshop.service.NotificationEmailService;
 import com.jewelryshop.service.ProductPricingService;
+import com.jewelryshop.service.StatusHistoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -41,6 +42,7 @@ public class OrderServiceImpl implements OrderService {
     private final ActivityLogService activityLogService;
     private final ProductPricingService productPricingService;
     private final NotificationEmailService notificationEmailService;
+    private final StatusHistoryService statusHistoryService;
 
     @Override
     @Transactional
@@ -134,6 +136,14 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(savedOrder);
 
+        statusHistoryService.recordOrderStatusChange(
+            savedOrder,
+            "NONE",
+            savedOrder.getOrderStatus().name(),
+            user.getEmail(),
+            "Order placed"
+        );
+
         if (appliedCoupon != null) {
             couponService.recordCouponUsage(appliedCoupon.getId(), userId, savedOrder.getId());
         }
@@ -154,14 +164,24 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest request) {
+    public OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest request, String changedBy) {
         log.info("Updating order status for order: {}", orderId);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
+        String oldStatus = order.getOrderStatus().name();
+
         order.setOrderStatus(request.getOrderStatus());
         orderRepository.save(order);
+
+        statusHistoryService.recordOrderStatusChange(
+                order,
+                oldStatus,
+                request.getOrderStatus().name(),
+                changedBy,
+                request.getNotes()
+        );
 
         notificationEmailService.sendOrderStatusEmail(order);
 
@@ -190,6 +210,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Order is already cancelled");
         }
 
+        String oldStatus = order.getOrderStatus().name();
+
         // Restore stock
         for (OrderItem item : order.getOrderItems()) {
             Product product = item.getProduct();
@@ -201,10 +223,58 @@ public class OrderServiceImpl implements OrderService {
         order.setCancellationReason(request.getReason());
         orderRepository.save(order);
 
+        statusHistoryService.recordOrderStatusChange(
+            order,
+            oldStatus,
+            Order.OrderStatus.CANCELLED.name(),
+            order.getUser().getEmail(),
+            request.getReason()
+        );
+
         notificationEmailService.sendOrderStatusEmail(order);
 
         log.info("Order cancelled successfully: {}", orderId);
         return mapToOrderResponse(order);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrderHistory(Long userId, Long orderId) {
+        log.info("Deleting order history for user {} and order {}", userId, orderId);
+
+        Order order = orderRepository.findByIdAndUserIdAndDeletedAtIsNull(orderId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        order.setDeletedAt(LocalDateTime.now());
+        orderRepository.save(order);
+
+        activityLogService.logActivity(userId, "ORDER_HISTORY_DELETE",
+                "Deleted order history for order " + order.getOrderNumber(),
+                "ORDER", order.getId(), "SUCCESS", null);
+
+        log.info("Order history deleted successfully for order {}", orderId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrderHistoryAdmin(Long orderId) {
+        log.info("Deleting order history from admin for order {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        if (order.getDeletedAt() != null) {
+            throw new BadRequestException("Order history is already deleted");
+        }
+
+        order.setDeletedAt(LocalDateTime.now());
+        orderRepository.save(order);
+
+        activityLogService.logActivity(order.getUser().getId(), "ORDER_HISTORY_DELETE_ADMIN",
+                "Admin deleted order history for order " + order.getOrderNumber(),
+                "ORDER", order.getId(), "SUCCESS", null);
+
+        log.info("Admin order history deleted successfully for order {}", orderId);
     }
 
     @Override
@@ -239,6 +309,8 @@ public class OrderServiceImpl implements OrderService {
         response.setId(order.getId());
         response.setOrderNumber(order.getOrderNumber());
         response.setUserId(order.getUser().getId());
+        response.setCustomerName(order.getUser().getFullName());
+        response.setCustomerEmail(order.getUser().getEmail());
         response.setCouponId(order.getCoupon() != null ? order.getCoupon().getId() : null);
         response.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
         response.setAddressSnapshot(order.getAddressSnapshot());
@@ -249,6 +321,7 @@ public class OrderServiceImpl implements OrderService {
         response.setPaymentStatus(order.getPaymentStatus());
         response.setOrderStatus(order.getOrderStatus());
         response.setCancellationReason(order.getCancellationReason());
+        response.setItemsCount(order.getOrderItems() != null ? order.getOrderItems().size() : 0);
         response.setCreatedAt(order.getCreatedAt());
         response.setUpdatedAt(order.getUpdatedAt());
 

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Tag, Typography, Card, Input, Select, Space, message } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Table, Tag, Typography, Card, Input, Select, Space, message, Button, Modal } from 'antd';
+import { SearchOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useLocation } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatPrice, formatDate } from '../../utils/helpers';
 import { adminService } from '../../services';
@@ -9,6 +10,7 @@ const { Title } = Typography;
 const { Option } = Select;
 
 const AdminPayments = () => {
+  const location = useLocation();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -18,6 +20,19 @@ const AdminPayments = () => {
     pageSize: 10,
     total: 0,
   });
+
+  const routeStatus = useMemo(() => new URLSearchParams(location.search).get('status'), [location.search]);
+  const effectiveStatusFilter = routeStatus || statusFilter;
+
+  const pageTitle = useMemo(() => {
+    const titles = {
+      PENDING: 'Pending Payments',
+      SUCCESS: 'Successful Payments',
+      FAILED: 'Failed Payments',
+      REFUNDED: 'Refunded Payments',
+    };
+    return titles[routeStatus] || 'Payment History';
+  }, [routeStatus]);
 
   useEffect(() => {
     fetchPayments(pagination.current - 1, pagination.pageSize);
@@ -35,6 +50,8 @@ const AdminPayments = () => {
         orderId: payment.orderId,
         orderNumber: payment.orderNumber,
         userId: payment.userId,
+        customerName: payment.customerName,
+        customerEmail: payment.customerEmail,
         paymentMethod: payment.paymentMethod,
         transactionId: payment.transactionId,
         paymentReference: payment.paymentReference,
@@ -92,6 +109,26 @@ const AdminPayments = () => {
     }
   };
 
+  const handleDeletePaymentHistory = (payment) => {
+    Modal.confirm({
+      title: 'Delete payment history?',
+      content: `This will remove payment record ${payment.orderNumber} from the admin payment history.`,
+      okText: 'Delete History',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await adminService.deletePaymentHistory(payment.id);
+          message.success('Payment history deleted successfully');
+          fetchPayments(pagination.current - 1, pagination.pageSize);
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Failed to delete payment history');
+          throw error;
+        }
+      },
+    });
+  };
+
   const columns = [
     {
       title: 'Order Number',
@@ -112,9 +149,14 @@ const AdminPayments = () => {
       render: (method) => <Tag color={method === 'UPI' ? 'purple' : 'gold'}>{method}</Tag>,
     },
     {
-      title: 'User ID',
-      dataIndex: 'userId',
-      key: 'userId',
+      title: 'Customer',
+      key: 'customer',
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{record.customerName || `User #${record.userId}`}</div>
+          <div style={{ fontSize: 12, color: '#666' }}>{record.customerEmail || '-'}</div>
+        </div>
+      ),
     },
     {
       title: 'Gateway',
@@ -165,22 +207,28 @@ const AdminPayments = () => {
       key: 'date',
       render: (date) => formatDate(date),
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
+      defaultSortOrder: 'descend',
     },
     {
       title: 'Action',
       key: 'action',
       render: (_, record) => (
-        <Select
-          size="small"
-          value={record.orderPaymentStatus}
-          style={{ width: 130 }}
-          onChange={(value) => handleUpdatePaymentStatus(record.orderId, value)}
-        >
-          <Option value="PENDING">Pending</Option>
-          <Option value="PAID">Paid</Option>
-          <Option value="FAILED">Failed</Option>
-          <Option value="REFUNDED">Refunded</Option>
-        </Select>
+        <Space>
+          <Select
+            size="small"
+            value={record.orderPaymentStatus}
+            style={{ width: 130 }}
+            onChange={(value) => handleUpdatePaymentStatus(record.orderId, value)}
+          >
+            <Option value="PENDING">Pending</Option>
+            <Option value="PAID">Paid</Option>
+            <Option value="FAILED">Failed</Option>
+            <Option value="REFUNDED">Refunded</Option>
+          </Select>
+          <Button danger type="link" icon={<DeleteOutlined />} onClick={() => handleDeletePaymentHistory(record)}>
+            Delete
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -188,9 +236,11 @@ const AdminPayments = () => {
   const filteredPayments = payments.filter(payment => {
     const matchesSearch = 
       payment.orderNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
-      payment.transactionId?.toLowerCase().includes(searchText.toLowerCase());
+      payment.transactionId?.toLowerCase().includes(searchText.toLowerCase()) ||
+      payment.customerName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      payment.customerEmail?.toLowerCase().includes(searchText.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+    const matchesStatus = effectiveStatusFilter === 'all' || payment.status === effectiveStatusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -200,7 +250,7 @@ const AdminPayments = () => {
 
   return (
     <AdminLayout>
-      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>Payment History</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>{pageTitle}</Title>
 
       <div style={{ marginBottom: 24 }}>
         <Space size="large">
@@ -236,11 +286,13 @@ const AdminPayments = () => {
           value={statusFilter}
           onChange={setStatusFilter}
           style={{ width: 150 }}
+          disabled={Boolean(routeStatus)}
         >
           <Option value="all">All Status</Option>
           <Option value="SUCCESS">Success</Option>
           <Option value="PENDING">Pending</Option>
           <Option value="FAILED">Failed</Option>
+          <Option value="REFUNDED">Refunded</Option>
         </Select>
       </div>
 

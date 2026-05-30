@@ -4,6 +4,9 @@ import com.jewelryshop.entity.Order;
 import com.jewelryshop.entity.User;
 import com.jewelryshop.email.EmailService;
 import com.jewelryshop.service.NotificationEmailService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +29,7 @@ import java.util.Map;
 public class NotificationEmailServiceImpl implements NotificationEmailService {
 
     private final EmailService emailService;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -123,6 +127,7 @@ public class NotificationEmailServiceImpl implements NotificationEmailService {
         LocalDateTime placedAt = order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now();
         LocalDateTime estimatedDelivery = addWorkingDays(placedAt, deliveryWorkingDays);
         List<Map<String, Object>> orderItems = new ArrayList<>();
+        Map<String, Object> shippingAddress = parseShippingAddress(order.getAddressSnapshot());
 
         order.getOrderItems().forEach(item -> {
             Map<String, Object> itemModel = new HashMap<>();
@@ -144,6 +149,10 @@ public class NotificationEmailServiceImpl implements NotificationEmailService {
         model.put("discountAmount", order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
         model.put("finalAmount", order.getFinalAmount());
         model.put("addressSnapshot", order.getAddressSnapshot());
+        model.put("shippingAddressName", shippingAddress.get("name"));
+        model.put("shippingAddressPhone", shippingAddress.get("phone"));
+        model.put("shippingAddressLines", shippingAddress.get("lines"));
+        model.put("shippingAddressSummary", shippingAddress.get("summary"));
         model.put("placedOnDate", EMAIL_DATE_FORMATTER.format(placedAt));
         model.put("estimatedDeliveryDate", EMAIL_DATE_FORMATTER.format(estimatedDelivery));
         model.put("deliveryWorkingDays", deliveryWorkingDays);
@@ -204,5 +213,94 @@ public class NotificationEmailServiceImpl implements NotificationEmailService {
         }
 
         guardedTask.run();
+    }
+
+    private Map<String, Object> parseShippingAddress(String snapshot) {
+        Map<String, Object> address = new HashMap<>();
+        List<String> lines = new ArrayList<>();
+
+        if (snapshot == null || snapshot.isBlank()) {
+            address.put("name", "Customer");
+            address.put("phone", null);
+            address.put("lines", lines);
+            address.put("summary", "Shipping address was not available at the time of checkout.");
+            return address;
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(snapshot);
+            String name = textValue(root, "fullName", "name", "recipientName", "customerName");
+            String phone = textValue(root, "phone", "mobile", "contactNumber");
+            String addressLine1 = textValue(root, "addressLine1", "line1", "streetAddress", "street");
+            String addressLine2 = textValue(root, "addressLine2", "line2", "apartment", "suite");
+            String city = textValue(root, "city", "town");
+            String state = textValue(root, "state", "province", "region");
+            String postalCode = textValue(root, "postalCode", "pincode", "pinCode", "zipCode", "zip");
+            String country = textValue(root, "country");
+
+            if (!name.isBlank()) {
+                address.put("name", name);
+            } else {
+                address.put("name", "Customer");
+            }
+
+            if (!addressLine1.isBlank()) lines.add(addressLine1);
+            if (!addressLine2.isBlank()) lines.add(addressLine2);
+
+            String cityState = joinNonBlank(", ", city, state);
+            if (!cityState.isBlank()) lines.add(cityState);
+
+            String postalCountry = joinNonBlank(" • ", postalCode, country);
+            if (!postalCountry.isBlank()) lines.add(postalCountry);
+
+            address.put("phone", phone.isBlank() ? null : phone);
+            address.put("lines", lines);
+            address.put("summary", joinNonBlank(" • ", addressLine1, city, state, postalCode));
+            return address;
+        } catch (JsonProcessingException ex) {
+            log.warn("Unable to parse order address snapshot for email, using fallback formatting", ex);
+            return fallbackAddress(snapshot);
+        }
+    }
+
+    private Map<String, Object> fallbackAddress(String snapshot) {
+        Map<String, Object> address = new HashMap<>();
+        List<String> lines = new ArrayList<>();
+        lines.add(snapshot);
+        address.put("name", "Customer");
+        address.put("phone", null);
+        address.put("lines", lines);
+        address.put("summary", snapshot);
+        return address;
+    }
+
+    private String textValue(JsonNode node, String... keys) {
+        if (node == null || keys == null) {
+            return "";
+        }
+
+        for (String key : keys) {
+            JsonNode child = node.get(key);
+            if (child != null && !child.isNull()) {
+                String value = child.asText("").trim();
+                if (!value.isBlank()) {
+                    return value;
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private String joinNonBlank(String separator, String... values) {
+        List<String> parts = new ArrayList<>();
+        if (values != null) {
+            for (String value : values) {
+                if (value != null && !value.isBlank()) {
+                    parts.add(value.trim());
+                }
+            }
+        }
+        return String.join(separator, parts);
     }
 }

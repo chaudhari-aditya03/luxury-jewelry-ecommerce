@@ -21,20 +21,22 @@
                     <td style="padding:36px;line-height:1.75;font-size:15px;">
                         <p style="margin:0 0 16px;">Hi <strong th:text="${customerName}">Customer</strong>,</p>
                         <p style="margin:0 0 20px;">Your order <strong th:text="${orderNumber}">ORD-00000000</strong> has been placed successfully.</p>
-                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 20px;border-collapse:collapse;border:1px solid #eadfcd;border-radius:18px;overflow:hidden;">
-                            <tr>
-                                <td style="padding:16px 18px;background:#fff9f1;color:#7a6047;">Placed on</td>
-                                <td style="padding:16px 18px;background:#fff9f1;font-weight:700;text-align:right;" th:text="${placedOnDate}">30 May 2026</td>
-                            </tr>
-                            <tr>
-                                <td style="padding:16px 18px;border-top:1px solid #eadfcd;">Expected delivery</td>
-                                <td style="padding:16px 18px;border-top:1px solid #eadfcd;font-weight:700;text-align:right;" th:text="${estimatedDeliveryDate}">06 Jun 2026</td>
-                            </tr>
-                            <tr>
-                                <td style="padding:16px 18px;border-top:1px solid #eadfcd;">Delivery estimate</td>
-                                <td style="padding:16px 18px;border-top:1px solid #eadfcd;font-weight:700;text-align:right;" th:text="${deliveryEstimateText}">within 5 working days from the order date</td>
-                            </tr>
-                        </table>
+                        <div style="margin:0 0 20px;padding:18px;border:1px solid #eadfcd;border-radius:18px;background:#fffaf3;">
+                            <div style="display:block;">
+                                <div style="display:inline-block;min-width:140px;vertical-align:top;margin-right:18px;margin-bottom:14px;">
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:4px;">Placed on</div>
+                                    <div style="font-weight:800;" th:text="${placedOnDate}">30 May 2026</div>
+                                </div>
+                                <div style="display:inline-block;min-width:160px;vertical-align:top;margin-right:18px;margin-bottom:14px;">
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:4px;">Expected delivery</div>
+                                    <div style="font-weight:800;" th:text="${estimatedDeliveryDate}">06 Jun 2026</div>
+                                </div>
+                                <div style="display:inline-block;min-width:180px;vertical-align:top;margin-bottom:14px;">
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:4px;">Delivery estimate</div>
+                                    <div style="font-weight:800;" th:text="${deliveryEstimateText}">within 5 working days from the order date</div>
+                                </div>
+                            </div>
+                        </div>
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:22px;">
                             <thead>
                             <tr style="text-align:left;border-bottom:1px solid #eadfcd;color:#7a6047;">
@@ -74,9 +76,22 @@
                                 <td style="padding:12px 0;text-align:right;font-weight:700;" th:text="${paymentStatus}">PENDING</td>
                             </tr>
                         </table>
-                        <div th:if="${addressSnapshot != null}" style="margin-top:18px;padding:18px;border-radius:18px;background:#faf4ea;border:1px solid #eadfcd;">
-                            <div style="font-size:13px;color:#7a6047;margin-bottom:6px;">Shipping address</div>
-                            <div style="font-weight:700;line-height:1.6;" th:text="${addressSnapshot}">Address</div>
+                        <div th:if="${shippingAddressLines != null}" style="margin-top:18px;padding:20px;border-radius:20px;background:linear-gradient(180deg,#fff8ef 0%,#f8efe1 100%);border:1px solid #e9ddc8;box-shadow:0 10px 24px rgba(36,28,23,0.06);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+                                <div>
+                                    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;font-weight:700;margin-bottom:5px;">Shipping address</div>
+                                    <div style="font-size:18px;font-weight:900;color:#241c17;line-height:1.3;" th:text="${shippingAddressName}">Customer Name</div>
+                                </div>
+                                <div style="padding:8px 12px;border-radius:999px;background:#16110f;color:#f8f4ef;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Verified delivery details</div>
+                            </div>
+                            <div style="padding:16px;border-radius:16px;background:#ffffff;border:1px solid #efe4d4;">
+                                <div style="line-height:1.75;color:#3c3128;font-size:14px;">
+                                    <div th:each="line : ${shippingAddressLines}" th:text="${line}">Address line</div>
+                                </div>
+                                <div th:if="${shippingAddressPhone != null and !#strings.isEmpty(shippingAddressPhone)}" style="margin-top:12px;padding-top:12px;border-top:1px solid #f0e6d8;font-size:13px;color:#7a6047;">
+                                    Phone: <span th:text="${shippingAddressPhone}">+91 00000 00000</span>
+                                </div>
+                            </div>
                         </div>
                     </td>
                 </tr>

@@ -20,8 +20,12 @@
                     <td style="padding:36px;line-height:1.75;font-size:15px;">
                         <p style="margin:0 0 16px;">Hi <strong th:text="${customerName}">Customer</strong>,</p>
                         <p style="margin:0 0 18px;">Your account is ready. Explore our curated jewelry collection and discover timeless pieces designed to last.</p>
+                        <div style="padding:18px;border-radius:18px;background:#fff7ec;border:1px solid #eadfcd;margin-bottom:18px;">
+                            <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:6px;">What to expect</div>
+                            <div style="font-weight:700;line-height:1.7;">Personalized offers, faster checkout, and order updates sent directly to your inbox.</div>
+                        </div>
                         <p style="margin:0;">
-                            <a th:href="${frontendUrl}" th:text="${frontendUrl}" style="display:inline-block;background:#9c773f;color:#fff;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:700;">Visit the store</a>
+                            <a th:href="${frontendUrl}" th:text="${frontendUrl}" style="display:inline-block;background:linear-gradient(135deg,#16110f 0%,#9c773f 100%);color:#fff;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:700;box-shadow:0 10px 24px rgba(31,26,23,0.2);">Visit the store</a>
                         </p>
                     </td>
                 </tr>

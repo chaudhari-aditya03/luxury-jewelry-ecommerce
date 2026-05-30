@@ -21,13 +21,13 @@
                     <td style="padding:36px;line-height:1.75;font-size:15px;">
                         <p style="margin:0 0 16px;">Hi <strong th:text="${customerName}">Customer</strong>,</p>
                         <p style="margin:0 0 20px;">Your order <strong th:text="${orderNumber}">ORD-00000000</strong> has been handed over to the delivery partner.</p>
-                        <div style="padding:18px;border-radius:18px;background:#f4fbf5;border:1px solid #d8eadb;margin-bottom:20px;">
-                            <div style="font-size:13px;color:#5d7f62;margin-bottom:4px;">Delivery estimate</div>
-                            <div style="font-weight:800;" th:text="${estimatedDeliveryDate}">06 Jun 2026</div>
+                        <div style="margin:0 0 20px;padding:18px;border:1px solid #d8eadb;border-radius:18px;background:#f4fbf5;">
+                            <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#5d7f62;margin-bottom:6px;">Delivery estimate</div>
+                            <div style="font-size:18px;font-weight:800;" th:text="${estimatedDeliveryDate}">06 Jun 2026</div>
                         </div>
                         <div style="padding:18px;border-radius:18px;background:#faf4ea;border:1px solid #eadfcd;">
-                            <div style="font-size:13px;color:#7a6047;margin-bottom:4px;">Order status</div>
-                            <div style="font-weight:800;" th:text="${orderStatus}">SHIPPED</div>
+                            <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#7a6047;margin-bottom:6px;">Order status</div>
+                            <div style="font-size:18px;font-weight:800;" th:text="${orderStatus}">SHIPPED</div>
                         </div>
                     </td>
                 </tr>

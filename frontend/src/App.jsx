@@ -41,6 +41,7 @@ import AdminAnalytics from './admin/pages/Analytics';
 import AdminPayments from './admin/pages/Payments';
 import AdminProfile from './admin/pages/Profile';
 import AdminSettings from './admin/pages/Settings';
+import AdminReviews from './admin/pages/Reviews';
 import AdminDiscountManagement from './admin/pages/AdminDiscountManagement';
 
 // Error Pages
@@ -177,6 +178,14 @@ function App() {
                 }
               />
               <Route
+                path="/admin/customers"
+                element={
+                  <AdminRoute>
+                    <AdminUsers />
+                  </AdminRoute>
+                }
+              />
+              <Route
                 path="/admin/users/edit/:id"
                 element={
                   <AdminRoute>
@@ -221,6 +230,14 @@ function App() {
                 element={
                   <AdminRoute>
                     <AdminSettings />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/reviews"
+                element={
+                  <AdminRoute>
+                    <AdminReviews />
                   </AdminRoute>
                 }
               />

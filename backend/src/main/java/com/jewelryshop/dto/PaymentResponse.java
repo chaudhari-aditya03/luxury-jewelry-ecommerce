@@ -17,6 +17,8 @@ public class PaymentResponse {
     private Long orderId;
     private String orderNumber;
     private Long userId;
+    private String customerName;
+    private String customerEmail;
     private Order.PaymentMethod paymentMethod;
     private String paymentGateway;
     private String transactionId;

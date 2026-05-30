@@ -95,26 +95,17 @@ cors.allowed.headers=${CORS_ALLOWED_HEADERS:*}
 cors.allow.credentials=${CORS_ALLOW_CREDENTIALS:true}
 
 # =====================================================
-# MAIL CONFIGURATION
+# EMAIL CONFIGURATION (Brevo API)
 # =====================================================
-spring.mail.host=${MAIL_HOST:smtp.gmail.com}
-spring.mail.port=${MAIL_PORT:587}
-spring.mail.username=${MAIL_USERNAME:${SMTP_USERNAME:${GMAIL_USERNAME}}}
-spring.mail.password=${MAIL_PASSWORD:${SMTP_PASSWORD:${GMAIL_APP_PASSWORD}}}
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.connectiontimeout=5000
-spring.mail.properties.mail.smtp.timeout=3000
-spring.mail.properties.mail.smtp.writetimeout=5000
-spring.mail.properties.mail.smtp.ssl.trust=${MAIL_HOST:smtp.gmail.com}
-spring.mail.properties.mail.smtp.ssl.protocols=TLSv1.2
-spring.mail.properties.mail.debug=true
-logging.level.org.springframework.mail=DEBUG
-logging.level.org.springframework.mail.javamail=DEBUG
-
-app.mail.from-name=${MAIL_FROM_NAME:Jewelry Shop}
-app.mail.from-email=${MAIL_FROM_EMAIL:${GMAIL_USERNAME:${spring.mail.username:}}}
-app.admin.email=${ADMIN_EMAIL:${spring.mail.username:}}
+app.mail.provider=${MAIL_PROVIDER:brevo}
+app.mail.enabled=${MAIL_ENABLED:true}
+app.mail.from-name=${MAIL_FROM_NAME:Luxury Maison}
+app.mail.from-email=${MAIL_FROM_EMAIL:}
+app.mail.api-key=${BREVO_API_KEY:}
+app.mail.request-timeout-ms=${MAIL_REQUEST_TIMEOUT_MS:10000}
+app.mail.max-retries=${MAIL_MAX_RETRIES:3}
+app.mail.retry-backoff-ms=${MAIL_RETRY_BACKOFF_MS:400}
+app.admin.email=${ADMIN_EMAIL:${MAIL_FROM_EMAIL:${app.mail.from-email:}}}
 
 # =====================================================
 # OTP CONFIGURATION

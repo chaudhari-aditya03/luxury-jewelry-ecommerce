@@ -69,6 +69,8 @@ const AccountPage = () => {
   const [selectedOrderForCancel, setSelectedOrderForCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+  const [isDeletingOrderHistory, setIsDeletingOrderHistory] = useState(false);
+  const [showAllOrders, setShowAllOrders] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -317,6 +319,35 @@ const AccountPage = () => {
       setIsCancellingOrder(false);
     }
   };
+
+  const handleDeleteOrderHistory = (order) => {
+    Modal.confirm({
+      title: 'Delete order history?',
+      content: `This will remove order ${order.orderId} from your account history. Your payment and store records remain intact.`,
+      okText: 'Delete History',
+      cancelText: 'Keep History',
+      okButtonProps: { danger: true, loading: isDeletingOrderHistory },
+      onOk: async () => {
+        setIsDeletingOrderHistory(true);
+        try {
+          await orderService.deleteOrderHistory(order.id);
+          setOrders((prev) => prev.filter((item) => item.id !== order.id));
+          if (selectedOrderDetails?.id === order.id) {
+            setOrderDetailOpen(false);
+            setSelectedOrderDetails(null);
+          }
+          message.success(`Order ${order.orderId} removed from history`);
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Failed to delete order history');
+          throw error;
+        } finally {
+          setIsDeletingOrderHistory(false);
+        }
+      },
+    });
+  };
+
+  const visibleOrders = showAllOrders ? orders : orders.slice(0, 3);
 
   const handleViewOrderDetails = async (order) => {
     setSelectedOrderDetails(order);
@@ -663,8 +694,9 @@ const AccountPage = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="account-order-grid">
-                      {orders.map((order) => (
+                    <>
+                      <div className="account-order-grid">
+                        {visibleOrders.map((order) => (
                         <article key={order.id} className="account-order-card">
                           <div className="flex items-start justify-between gap-4">
                             <div>
@@ -697,10 +729,26 @@ const AccountPage = () => {
                                 Cancel Order
                               </Button>
                             ) : null}
+                            <Button className="account-secondary-btn" onClick={() => handleDeleteOrderHistory(order)} aria-label={`Delete order history for ${order.orderId}`}>
+                              Delete History
+                            </Button>
                           </div>
                         </article>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+
+                      {orders.length > 3 ? (
+                        <div className="account-button-row justify-center mt-2">
+                          <Button
+                            className="account-secondary-btn"
+                            onClick={() => setShowAllOrders((prev) => !prev)}
+                            aria-label={showAllOrders ? 'Show fewer orders' : 'View more orders'}
+                          >
+                            {showAllOrders ? 'Show Less' : 'View More'}
+                          </Button>
+                        </div>
+                      ) : null}
+                    </>
                   )}
                 </div>
               )}

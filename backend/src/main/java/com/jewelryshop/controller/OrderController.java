@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -63,13 +64,23 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", order));
     }
 
+    @DeleteMapping("/orders/history/{id}")
+    @Operation(summary = "Delete order from user history")
+    public ResponseEntity<ApiResponse<Void>> deleteOrderHistory(
+            Authentication authentication,
+            @PathVariable Long id) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        orderService.deleteOrderHistory(userDetails.getId(), id);
+        return ResponseEntity.ok(ApiResponse.success("Order history deleted successfully", null));
+    }
+
     @GetMapping("/admin/orders")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get all orders (Admin)")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> getAllOrders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<OrderResponse> orders = orderService.getAllOrders(pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -78,9 +89,19 @@ public class OrderController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update order status (Admin)")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
+            Authentication authentication,
             @PathVariable Long id,
             @Valid @RequestBody UpdateOrderStatusRequest request) {
-        OrderResponse order = orderService.updateOrderStatus(id, request);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        OrderResponse order = orderService.updateOrderStatus(id, request, userDetails.getEmail());
         return ResponseEntity.ok(ApiResponse.success("Order status updated successfully", order));
+    }
+
+    @DeleteMapping("/admin/orders/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete order history (Admin)")
+    public ResponseEntity<ApiResponse<Void>> deleteOrderHistoryAdmin(@PathVariable Long id) {
+        orderService.deleteOrderHistoryAdmin(id);
+        return ResponseEntity.ok(ApiResponse.success("Order history deleted successfully", null));
     }
 }

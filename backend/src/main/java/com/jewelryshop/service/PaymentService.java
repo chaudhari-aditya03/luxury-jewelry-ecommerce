@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 public interface PaymentService {
     PaymentInitiationResponse createPaymentOrder(CreatePaymentRequest request);
     PaymentResponse confirmUpiPayment(ConfirmUpiPaymentRequest request);
-    PaymentResponse updatePaymentStatus(Long orderId, String status);
+    PaymentResponse updatePaymentStatus(Long orderId, String status, String changedBy);
+    void deletePaymentHistory(Long paymentId);
     Page<PaymentResponse> getAllPayments(Pageable pageable);
 }

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Table, Button, Tag, Space, Modal, Typography,
+  Table, Button, Tag, Space, Modal, Typography, Input,
   Descriptions, message, Select, Dropdown
 } from 'antd';
-import { EyeOutlined, DownOutlined } from '@ant-design/icons';
+import { EyeOutlined, DownOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useLocation } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatPrice, formatDate } from '../../utils/helpers';
 import { adminService } from '../../services';
@@ -12,11 +13,25 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const AdminOrders = () => {
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [searchText, setSearchText] = useState('');
+
+  const statusFilter = useMemo(() => new URLSearchParams(location.search).get('status'), [location.search]);
+  const pageTitle = useMemo(() => {
+    const titles = {
+      PENDING: 'Pending Orders',
+      PROCESSING: 'Processing Orders',
+      SHIPPED: 'Shipped Orders',
+      DELIVERED: 'Delivered Orders',
+      CANCELLED: 'Cancelled Orders',
+    };
+    return titles[statusFilter] || 'All Orders';
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchOrders(1, pagination.pageSize);
@@ -65,10 +80,13 @@ const AdminOrders = () => {
         id: order.id,
         orderNumber: order.orderNumber,
         userId: order.userId,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
         date: order.createdAt,
         total: Number(order.finalAmount ?? order.totalAmount ?? 0),
         status: order.orderStatus,
         paymentStatus: order.paymentStatus,
+        itemsCount: order.itemsCount ?? order.orderItems?.length ?? 0,
         items: order.orderItems || [],
         address: order.addressSnapshot,
       })));
@@ -100,6 +118,30 @@ const AdminOrders = () => {
     setIsModalVisible(true);
   };
 
+  const handleDeleteOrderHistory = (order) => {
+    Modal.confirm({
+      title: 'Delete order history?',
+      content: `This will remove order ${order.orderNumber} from the admin order history.`,
+      okText: 'Delete History',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await adminService.deleteOrderHistory(order.id);
+          message.success('Order history deleted successfully');
+          if (selectedOrder?.id === order.id) {
+            setIsModalVisible(false);
+            setSelectedOrder(null);
+          }
+          fetchOrders(pagination.current, pagination.pageSize);
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Failed to delete order history');
+          throw error;
+        }
+      },
+    });
+  };
+
   const statusMenuItems = (record) => ([
     { key: 'PLACED', label: 'Placed' },
     { key: 'PROCESSING', label: 'Processing' },
@@ -117,9 +159,14 @@ const AdminOrders = () => {
       render: text => <Text strong>{text}</Text>,
     },
     {
-      title: 'User ID',
-      dataIndex: 'userId',
-      key: 'userId',
+      title: 'Customer',
+      key: 'customer',
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{record.customerName || `User #${record.userId}`}</div>
+          <div style={{ fontSize: 12, color: '#666' }}>{record.customerEmail || '-'}</div>
+        </div>
+      ),
     },
     {
       title: 'Date',
@@ -127,6 +174,13 @@ const AdminOrders = () => {
       key: 'date',
       render: date => formatDate(date),
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
+      defaultSortOrder: 'descend',
+    },
+    {
+      title: 'Items',
+      dataIndex: 'itemsCount',
+      key: 'itemsCount',
+      render: (count) => count || 0,
     },
     {
       title: 'Total',
@@ -180,20 +234,46 @@ const AdminOrders = () => {
       title: 'Action',
       key: 'action',
       render: (_, record) => (
-        <Button type="link" icon={<EyeOutlined />} onClick={() => showOrderDetails(record)}>
-          View
-        </Button>
+        <Space>
+          <Button type="link" icon={<EyeOutlined />} onClick={() => showOrderDetails(record)}>
+            View
+          </Button>
+          <Button danger type="link" icon={<DeleteOutlined />} onClick={() => handleDeleteOrderHistory(record)}>
+            Delete
+          </Button>
+        </Space>
       ),
     },
   ];
 
+  const filteredOrders = orders.filter((order) => {
+    const routeStatusMatches = !statusFilter ||
+      (statusFilter === 'PENDING' ? ['PLACED', 'PENDING'].includes(order.status) : order.status === statusFilter);
+    const search = searchText.toLowerCase();
+    const searchMatches = !search ||
+      order.orderNumber?.toLowerCase().includes(search) ||
+      order.customerName?.toLowerCase().includes(search) ||
+      order.customerEmail?.toLowerCase().includes(search);
+
+    return routeStatusMatches && searchMatches;
+  });
+
   return (
     <AdminLayout>
-      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>Orders</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Playfair Display', serif" }}>{pageTitle}</Title>
+
+      <div style={{ marginBottom: 16 }}>
+        <Input
+          placeholder="Search by order number, customer name, or email..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ maxWidth: 420 }}
+        />
+      </div>
 
       <Table
         columns={columns}
-        dataSource={orders}
+        dataSource={filteredOrders}
         loading={loading}
         pagination={{
           current: pagination.current,

@@ -38,7 +38,7 @@ public class BrevoEmailService implements EmailService {
     @Value("${app.mail.enabled:${MAIL_ENABLED:true}}")
     private boolean mailEnabled;
 
-    @Value("${app.mail.api-key:${BREVO_API_KEY:${MAIL_API_KEY:}}}")
+    @Value("${app.mail.api-key:${BREVO_API_KEY:}}")
     private String brevoApiKey;
 
     @Value("${app.mail.from-email:${MAIL_FROM_EMAIL:}}")
@@ -99,6 +99,8 @@ public class BrevoEmailService implements EmailService {
             throw new IllegalStateException("Unsupported mail provider: " + mailProvider + ". Only Brevo is supported in production.");
         }
 
+        validateBrevoConfiguration();
+
         String recipient = validateEmail(request.getTo(), "recipient");
         String sender = validateEmail(resolveSenderAddress(), "sender");
         String subject = validateText(request.getSubject(), "subject");
@@ -126,6 +128,20 @@ public class BrevoEmailService implements EmailService {
                 .providerMessageId(providerMessageId)
                 .statusCode(response.statusCode())
                 .build();
+    }
+
+    private void validateBrevoConfiguration() {
+        if (brevoApiKey == null || brevoApiKey.trim().isBlank()) {
+            throw new IllegalStateException("BREVO_API_KEY is required when app.mail.provider=brevo");
+        }
+
+        if (brevoApiKey.trim().startsWith("xsmtpsib-")) {
+            throw new IllegalStateException("BREVO_API_KEY is an SMTP key (xsmtpsib-). Create an API key in Brevo dashboard > SMTP & API > API keys and set that value in BREVO_API_KEY.");
+        }
+
+        if (resolvedFromEmail == null || resolvedFromEmail.isBlank()) {
+            throw new IllegalStateException("MAIL_FROM_EMAIL is required when app.mail.provider=brevo");
+        }
     }
 
     private HttpResponse<String> executeWithRetry(HttpRequest request, String templateName, String recipient) {

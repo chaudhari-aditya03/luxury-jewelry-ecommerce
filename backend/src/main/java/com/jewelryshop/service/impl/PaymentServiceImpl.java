@@ -12,6 +12,7 @@ import com.jewelryshop.repository.OrderRepository;
 import com.jewelryshop.repository.PaymentRepository;
 import com.jewelryshop.service.NotificationEmailService;
 import com.jewelryshop.service.PaymentService;
+import com.jewelryshop.service.StatusHistoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -33,6 +35,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final NotificationEmailService notificationEmailService;
+    private final StatusHistoryService statusHistoryService;
 
     @Value("${payment.upi.id:adityachaudhari312005@oksbi}")
     private String upiId;
@@ -48,7 +51,7 @@ public class PaymentServiceImpl implements PaymentService {
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", request.getOrderId()));
 
-        Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(order.getId())
+        Payment payment = paymentRepository.findTopByOrderIdAndDeletedAtIsNullOrderByCreatedAtDesc(order.getId())
                 .orElseGet(Payment::new);
 
         if (payment.getId() == null) {
@@ -62,6 +65,13 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setTransactionId(payment.getTransactionId() != null ? payment.getTransactionId() : "COD-" + order.getOrderNumber());
             payment.setPaymentReference(null);
             Payment savedPayment = paymentRepository.save(payment);
+            statusHistoryService.recordPaymentStatusChange(
+                    savedPayment,
+                    "NONE",
+                    savedPayment.getStatus().name(),
+                    order.getUser().getEmail(),
+                    "Cash on delivery payment created"
+            );
             return buildCodInitiationResponse(order, savedPayment);
         }
 
@@ -72,6 +82,13 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setTransactionId(transactionId);
         payment.setPaymentReference(payment.getPaymentReference());
         Payment savedPayment = paymentRepository.save(payment);
+        statusHistoryService.recordPaymentStatusChange(
+            savedPayment,
+            "NONE",
+            savedPayment.getStatus().name(),
+            order.getUser().getEmail(),
+            "UPI payment initiated"
+        );
 
         return buildUpiInitiationResponse(order, savedPayment, upiUrl);
     }
@@ -88,13 +105,21 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("This order is not a UPI order");
         }
 
-        Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(order.getId())
+        Payment payment = paymentRepository.findTopByOrderIdAndDeletedAtIsNullOrderByCreatedAtDesc(order.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
-        boolean wasAlreadyPaid = order.getPaymentStatus() == Order.PaymentStatus.PAID;
+        String oldPaymentStatus = payment.getStatus().name();
         payment.setPaymentReference(request.getPaymentReference().trim());
         payment.setStatus(Payment.PaymentStatus.SUCCESS);
         paymentRepository.save(payment);
+
+        statusHistoryService.recordPaymentStatusChange(
+            payment,
+            oldPaymentStatus,
+            payment.getStatus().name(),
+            order.getUser().getEmail(),
+            "UPI reference confirmed"
+        );
 
         order.setPaymentStatus(Order.PaymentStatus.PAID);
         orderRepository.save(order);
@@ -104,7 +129,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public PaymentResponse updatePaymentStatus(Long orderId, String status) {
+    public PaymentResponse updatePaymentStatus(Long orderId, String status, String changedBy) {
         log.info("Updating payment status for order: {}", orderId);
 
         Order order = orderRepository.findById(orderId)
@@ -117,18 +142,40 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("Invalid payment status: " + status);
         }
 
-        Payment payment = paymentRepository.findTopByOrderIdOrderByCreatedAtDesc(orderId)
+        Payment payment = paymentRepository.findTopByOrderIdAndDeletedAtIsNullOrderByCreatedAtDesc(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
-        boolean wasAlreadyPaid = order.getPaymentStatus() == Order.PaymentStatus.PAID;
+        String oldPaymentStatus = payment.getStatus().name();
         order.setPaymentStatus(paymentStatus);
         orderRepository.save(order);
 
         payment.setStatus(mapPaymentStatus(paymentStatus));
         paymentRepository.save(payment);
 
+        statusHistoryService.recordPaymentStatusChange(
+            payment,
+            oldPaymentStatus,
+            payment.getStatus().name(),
+            changedBy,
+            "Manual admin payment status update"
+        );
+
         log.info("Payment status updated successfully");
         return mapToPaymentResponse(payment);
+    }
+
+    @Override
+    @Transactional
+    public void deletePaymentHistory(Long paymentId) {
+        log.info("Deleting payment history for payment {}", paymentId);
+
+        Payment payment = paymentRepository.findByIdAndDeletedAtIsNull(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "id", paymentId));
+
+        payment.setDeletedAt(LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        log.info("Payment history deleted successfully: {}", paymentId);
     }
 
     @Override
@@ -145,6 +192,8 @@ public class PaymentServiceImpl implements PaymentService {
         response.setOrderId(payment.getOrder().getId());
         response.setOrderNumber(payment.getOrder().getOrderNumber());
         response.setUserId(payment.getOrder().getUser().getId());
+        response.setCustomerName(payment.getOrder().getUser().getFullName());
+        response.setCustomerEmail(payment.getOrder().getUser().getEmail());
         response.setPaymentMethod(payment.getOrder().getPaymentMethod());
         response.setPaymentGateway(payment.getPaymentGateway());
         response.setTransactionId(payment.getTransactionId());

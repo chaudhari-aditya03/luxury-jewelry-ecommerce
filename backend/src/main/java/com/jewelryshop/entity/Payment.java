@@ -45,6 +45,9 @@ public class Payment {
     @Column(name = "retry_count")
     private Integer retryCount = 0;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

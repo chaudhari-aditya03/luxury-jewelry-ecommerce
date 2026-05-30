@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,7 @@ public class ActivityLogController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<ActivityLogResponse> logs = activityLogService.getUserActivityLogs(userDetails.getId(), pageable);
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
@@ -39,7 +40,7 @@ public class ActivityLogController {
     public ResponseEntity<ApiResponse<Page<ActivityLogResponse>>> getAllActivityLogs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<ActivityLogResponse> logs = activityLogService.getAllActivityLogs(pageable);
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
@@ -50,7 +51,7 @@ public class ActivityLogController {
             @PathVariable String activityType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<ActivityLogResponse> logs = activityLogService.getActivityLogsByType(activityType, pageable);
         return ResponseEntity.ok(ApiResponse.success(logs));
     }

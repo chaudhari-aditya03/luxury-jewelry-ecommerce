@@ -4,7 +4,7 @@ import {
   DashboardOutlined, ShoppingOutlined, UserOutlined,
   OrderedListOutlined, BarChartOutlined, LogoutOutlined,
   MenuUnfoldOutlined, MenuFoldOutlined, BellOutlined, DollarOutlined,
-  TagsOutlined, GiftOutlined
+  TagsOutlined, GiftOutlined, TeamOutlined, SettingOutlined
 } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -33,11 +33,36 @@ const AdminLayout = ({ children }) => {
     { key: '/admin', icon: <DashboardOutlined />, label: <Link to="/admin">Dashboard</Link> },
     { key: '/admin/products', icon: <ShoppingOutlined />, label: <Link to="/admin/products">Products</Link> },
     { key: '/admin/categories', icon: <TagsOutlined />, label: <Link to="/admin/categories">Categories</Link> },
-    { key: '/admin/orders', icon: <OrderedListOutlined />, label: <Link to="/admin/orders">Orders</Link> },
-    { key: '/admin/users', icon: <UserOutlined />, label: <Link to="/admin/users">Users</Link> },
+    {
+      key: 'orders',
+      icon: <OrderedListOutlined />,
+      label: 'Orders',
+      children: [
+        { key: '/admin/orders', label: <Link to="/admin/orders">All Orders</Link> },
+        { key: '/admin/orders?status=PENDING', label: <Link to="/admin/orders?status=PENDING">Pending Orders</Link> },
+        { key: '/admin/orders?status=PROCESSING', label: <Link to="/admin/orders?status=PROCESSING">Processing Orders</Link> },
+        { key: '/admin/orders?status=SHIPPED', label: <Link to="/admin/orders?status=SHIPPED">Shipped Orders</Link> },
+        { key: '/admin/orders?status=DELIVERED', label: <Link to="/admin/orders?status=DELIVERED">Delivered Orders</Link> },
+        { key: '/admin/orders?status=CANCELLED', label: <Link to="/admin/orders?status=CANCELLED">Cancelled Orders</Link> },
+      ],
+    },
+    { key: '/admin/customers', icon: <TeamOutlined />, label: <Link to="/admin/customers">Customers</Link> },
     { key: '/admin/coupons', icon: <GiftOutlined />, label: <Link to="/admin/coupons">Coupons</Link> },
+    { key: '/admin/reviews', icon: <UserOutlined />, label: <Link to="/admin/reviews">Reviews</Link> },
     { key: '/admin/analytics', icon: <BarChartOutlined />, label: <Link to="/admin/analytics">Analytics</Link> },
-    { key: '/admin/payments', icon: <DollarOutlined />, label: <Link to="/admin/payments">Payments</Link> },
+    {
+      key: 'payments',
+      icon: <DollarOutlined />,
+      label: 'Payments',
+      children: [
+        { key: '/admin/payments', label: <Link to="/admin/payments">All Transactions</Link> },
+        { key: '/admin/payments?status=PENDING', label: <Link to="/admin/payments?status=PENDING">Pending Payments</Link> },
+        { key: '/admin/payments?status=SUCCESS', label: <Link to="/admin/payments?status=SUCCESS">Successful Payments</Link> },
+        { key: '/admin/payments?status=FAILED', label: <Link to="/admin/payments?status=FAILED">Failed Payments</Link> },
+        { key: '/admin/payments?status=REFUNDED', label: <Link to="/admin/payments?status=REFUNDED">Refunded Payments</Link> },
+      ],
+    },
+    { key: '/admin/settings', icon: <SettingOutlined />, label: <Link to="/admin/settings">Settings</Link> },
   ];
 
   const userMenuItems = [
@@ -100,7 +125,8 @@ const AdminLayout = ({ children }) => {
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[`${location.pathname}${location.search}`]}
+          defaultOpenKeys={['orders', 'payments']}
           items={menuItems}
           style={{
             borderRight: 0,

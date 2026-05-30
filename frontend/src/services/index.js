@@ -118,6 +118,9 @@ export const orderService = {
   cancelOrder: (id, reason) =>
     apiClient.put(`/orders/cancel/${id}`, { reason }),
 
+  deleteOrderHistory: (id) =>
+    apiClient.delete(`/orders/history/${id}`),
+
   createPayment: (orderId, amount = null) =>
     apiClient.post('/payment/create', { orderId, amount }),
 
@@ -196,6 +199,9 @@ export const adminService = {
   updateOrderStatus: (orderId, statusData) =>
     apiClient.put(`/admin/orders/status/${orderId}`, statusData),
 
+  deleteOrderHistory: (orderId) =>
+    apiClient.delete(`/admin/orders/${orderId}`),
+
   // User Management
   getAllUsers: (page = 0, size = 10) =>
     apiClient.get('/admin/users', { params: { page, size } }),
@@ -261,6 +267,9 @@ export const adminService = {
 
   updatePaymentStatus: (orderId, status) =>
     apiClient.put('/payment/admin/status', null, { params: { orderId, status } }),
+
+  deletePaymentHistory: (paymentId) =>
+    apiClient.delete(`/payment/admin/payments/${paymentId}`),
 };
 
 export const categoryService = {

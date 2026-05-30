@@ -17,6 +17,8 @@ public class OrderResponse {
     private Long id;
     private String orderNumber;
     private Long userId;
+    private String customerName;
+    private String customerEmail;
     private Long couponId;
     private String couponCode;
     private String addressSnapshot;
@@ -27,6 +29,7 @@ public class OrderResponse {
     private Order.PaymentStatus paymentStatus;
     private Order.OrderStatus orderStatus;
     private String cancellationReason;
+    private int itemsCount;
     private List<OrderItemResponse> orderItems = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

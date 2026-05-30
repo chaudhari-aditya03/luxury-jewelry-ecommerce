@@ -104,6 +104,8 @@ const AdminUsers = () => {
       dataIndex: 'date',
       key: 'date',
       render: date => formatDate(date),
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+      defaultSortOrder: 'descend',
     },
     {
       title: 'Status',
