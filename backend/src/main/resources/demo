@@ -113,7 +113,7 @@ logging.level.org.springframework.mail=DEBUG
 logging.level.org.springframework.mail.javamail=DEBUG
 
 app.mail.from-name=${MAIL_FROM_NAME:Jewelry Shop}
-app.mail.from-email=${MAIL_FROM_EMAIL:${MAIL_USERNAME:${spring.mail.username:}}}
+app.mail.from-email=${MAIL_FROM_EMAIL:${GMAIL_USERNAME:${spring.mail.username:}}}
 app.admin.email=${ADMIN_EMAIL:${spring.mail.username:}}
 
 # =====================================================
@@ -134,9 +134,8 @@ spring.security.oauth2.client.provider.google.authorization-uri=https://accounts
 spring.security.oauth2.client.provider.google.token-uri=https://oauth2.googleapis.com/token
 spring.security.oauth2.client.provider.google.user-info-uri=https://www.googleapis.com/oauth2/v3/userinfo
 spring.security.oauth2.client.provider.google.user-name-attribute=sub
-logging.level.org.springframework.security=DEBUG
+
 logging.level.org.springframework.security.oauth2=DEBUG
-logging.level.org.springframework.web=DEBUG
 # =====================================================
 # APP CONFIGURATION
 # =====================================================
